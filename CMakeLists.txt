@@ -5,17 +5,26 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
 
-if(_WIN32)
-  #blocco per windows /Linux
-else()              # optional block
-    link_libraries(
-            avcodec
-            avformat
-            avfilter
-            avdevice
-            swresample
-            swscale
-            avutil
-    )
-endif()
+link_libraries(
+        avcodec
+        avformat
+        avfilter
+        avdevice
+        swresample
+        swscale
+        avutil
+)
+
+
+target_include_directories(Screen-capture PRIVATE
+        ${AVCODEC_INCLUDE_DIR}
+        ${AVFORMAT_INCLUDE_DIR}
+        ${AVUTIL_INCLUDE_DIR}
+        ${AVDEVICE_INCLUDE_DIR})
+
+target_link_libraries(Screen-capture PRIVATE
+        ${AVCODEC_LIBRARY}
+        ${AVFORMAT_LIBRARY}
+        ${AVUTIL_LIBRARY}
+        ${AVDEVICE_LIBRARY})
 
