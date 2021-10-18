@@ -1,0 +1,33 @@
+LINK UTILI :
+- https://github.com/leandromoreira/ffmpeg-libav-tutorial per capire come funziona la conversione di frame usando ffmpeg
+- https://github.com/FFmpeg/FFmpeg/tree/master/doc/examples contiene esempi di utlizzo di ffmpeg per vari obiettivi
+
+Parte 1 : Registrare lo schermo (Grabbing/Capturing Desktop)
+References : https://trac.ffmpeg.org/wiki/Capture/Desktop
+    1)	LINUX :
+        Use the x11grab device:
+            ffmpeg -video_size 1024x768 -framerate 25 -f x11grab -i :0.0+100,200 output.mp4
+            (This will grab the image from desktop, starting with the upper-left corner at x=100, y=200 with a width and
+                height of 1024⨉768.)
+
+            If you need audio too, you can use ALSA (see Capture/ALSA for more info):
+            ffmpeg -video_size 1024x768 -framerate 25 -f x11grab -i :0.0+100,200 -f alsa -ac 2 -i hw:0 output.mkv
+
+    2)	WINDOWS:
+        Supports 2 methods to grab the desktop : probably we should use gdigrab: Win32 GDI-based screen capture device.
+        (Input URL in avformat_open_input() is "desktop")
+
+        To capture all your displays as one big contiguous display:
+        ffmpeg -f gdigrab -framerate 30 -i desktop output.mkv
+
+        If you want to limit to a region, and show the area being grabbed:
+        ffmpeg -f gdigrab -framerate 30 -offset_x 10 -offset_y 20 -video_size 640x480 -show_region 1 -i desktop output.mkv
+
+    3)	MACOS :
+         Use the avfoundation device:
+         ffmpeg -f avfoundation -list_devices true -i ""
+         This will enumerate all the available input devices including screens ready to be captured.
+
+         Once you've figured out the device index corresponding to the screen to be captured, use:
+         ffmpeg -f avfoundation -i "<screen device index>:<audio device index>" output.mkv
+         This will capture the screen from <screen device index> and audio from <audio device index> into the output file output.mkv.
