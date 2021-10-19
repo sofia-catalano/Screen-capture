@@ -1,9 +1,24 @@
 LINK UTILI :
 - https://github.com/leandromoreira/ffmpeg-libav-tutorial per capire come funziona la conversione di frame usando ffmpeg
 - https://github.com/FFmpeg/FFmpeg/tree/master/doc/examples contiene esempi di utlizzo di ffmpeg per vari obiettivi
+- http://dranger.com/ffmpeg/ una sorta di tutorial
+- https://github.com/phamquy/FFmpeg-tutorial-samples
+
+NOTA:
+- https://github.com/Akagi201/ffmpeg-player/blob/master/simple-update/main.c altro esempio di cattura schermo interessante
+- https://en.wikibooks.org/wiki/SDL_(Simple_DirectMedia_Layer)/Basics/Getting_started
+- capire a cosa serve SDL esattamente :
+  Simple DirectMedia Layer (SDL) è una libreria libera multimediale multi piattaforma, scritta in C, che crea un livello
+  astratto al di sopra di varie piattaforme software grafiche e sonore e dunque può controllare video, audio digitale, CD-ROM,
+  suoni, thread, caricamento condiviso di oggetti, timer e networking. Questa astrazione permette ai programmatori di scrivere
+  un'applicazione multimediale una sola volta e farla girare su molti sistemi operativi: la versione corrente supporta
+  ufficialmente Linux, Windows, BeOS, MacOS e macOS, FreeBSD, OpenBSD, BSD/OS, Solaris, IRIX e QNX
+
 
 Parte 1 : Registrare lo schermo (Grabbing/Capturing Desktop)
-References : https://trac.ffmpeg.org/wiki/Capture/Desktop
+References :
+- https://trac.ffmpeg.org/wiki/Capture/Desktop
+- https://titanwolf.org/Network/Articles/Article?AID=92d6ea30-c905-45b1-9882-dc72b94c2b4d
     1)	LINUX :
         Use the x11grab device:
             ffmpeg -video_size 1024x768 -framerate 25 -f x11grab -i :0.0+100,200 output.mp4
@@ -31,3 +46,13 @@ References : https://trac.ffmpeg.org/wiki/Capture/Desktop
          Once you've figured out the device index corresponding to the screen to be captured, use:
          ffmpeg -f avfoundation -i "<screen device index>:<audio device index>" output.mkv
          This will capture the screen from <screen device index> and audio from <audio device index> into the output file output.mkv.
+
+
+    MACRO PER RICONOSCERE LA PIATTAFORMA SU CUI SI COMPILA :
+    qui sono listate tutte le possibili piattaforme e le macro associate
+    http://web.archive.org/web/20191012035921/http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system
+    In generale,
+    - per windows _WIN32 (riconosce sia win32 che win64 ovviamente),
+    - per linux __linux__ (in realtà Cheina ha sostituito __linux__ con linux) (anche se, se dobbiamo considerare TUTTE le piattaforme oltre a linux windows e macos dovremmo usare
+    ad esempio macro più generali (e.g. __unix__ (vedi link) )
+    - per MacOS __APPLE__ (da far provare a Sofia)
