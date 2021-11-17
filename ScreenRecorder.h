@@ -6,16 +6,73 @@
 #define PROGETTOPDS_SCREENRECORDER_H
 #include <iostream>
 #include <stdlib.h>
-#include "libavformat/avio.h"
-#include "libavutil/audio_fifo.h"
-#include "libavcodec/avcodec.h"
-#include "libavdevice/avdevice.h"
-#include "libavformat/avformat.h"
-#include "libavutil/imgutils.h"
-#include "libavutil/opt.h"
-#include "libswresample/swresample.h"
-#include "libswscale/swscale.h"
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <string>
+#include <math.h>
+
+using namespace std;
+
+extern "C"
+{
+    #include "libavformat/avio.h"
+    #include "libavutil/audio_fifo.h"
+    #include "libavcodec/avcodec.h"
+    #include "libavdevice/avdevice.h"
+    #include "libavformat/avformat.h"
+    #include "libavutil/imgutils.h"
+    #include "libavutil/opt.h"
+    #include "libswresample/swresample.h"
+    #include "libswscale/swscale.h"
+}
+
+typedef struct
+{
+    int framerate;   //30 ????
+    int capturetime_seconds;
+    float quality;  //value between 0.1 and 1
+    int width;
+    int height;
+    int offset_x;
+    int offset_y;
+    int screen_number;
+    bool fullscreen; //copiato da vedere
+    string output_file;
+
+} VideoInfo;
+
+enum class status{
+    record, pause, stop
+};
+
+
 class ScreenRecorder {
+    public:
+    ScreenRecorder(VideoInfo vi);
+	~ScreenRecorder();
+
+
+    private:
+    //video variables
+    VideoInfo vi;
+    AVFormatContext *format_context, *out_format_context;
+    const AVOutputFormat *output_format;
+  
+    AVCodec *av_encodec, *av_decodec;
+    const AVInputFormat *input_format;
+    AVDictionary *options;
+    int video_index;
+
+    AVCodecContext *codec_context, *out_codec_context;
+    AVCodecParameters *codec_parameters;
+
+
+    AVStream *video_st;
+
+    //functions
+    void initializeInputSource();
+    void initializeOutputSource();
 
 };
 
