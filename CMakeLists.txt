@@ -17,7 +17,8 @@ find_library(AVUTIL_LIBRARY avutil)
 find_path(AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h)
 find_library(AVDEVICE_LIBRARY avdevice)
 
-add_executable(Screen-capture main.cpp)
+add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
+
 
 target_include_directories(Screen-capture PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
 target_link_libraries(Screen-capture PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY})

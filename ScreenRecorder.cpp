@@ -19,6 +19,10 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
     cout << "All required functions are registered successfully" << endl;
 }
 
+ScreenRecorder::~ScreenRecorder(){
+
+};
+
 
 void ScreenRecorder::initializeInputSource(){
     //initialize the library: registers all available file formats and codecs with the library
@@ -173,7 +177,7 @@ void ScreenRecorder::initializeOutputSource() {
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
-    if ( out_codec_context->oformat->flags & AVFMT_GLOBALHEADER){
+    if ( out_format_context->oformat->flags & AVFMT_GLOBALHEADER){
         out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
