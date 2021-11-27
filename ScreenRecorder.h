@@ -57,10 +57,10 @@ class ScreenRecorder {
     //video variables
     VideoInfo vi;
     AVFormatContext *format_context, *out_format_context;
-    const AVOutputFormat *output_format;
+    AVOutputFormat *output_format;
   
     const AVCodec *av_encodec, *av_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
-    const AVInputFormat *input_format;
+    AVInputFormat *input_format;
     AVDictionary *options;
     int video_index;
 
