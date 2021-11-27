@@ -56,3 +56,4 @@ References :
     - per linux __linux__ (in realtà Cheina ha sostituito __linux__ con linux) (anche se, se dobbiamo considerare TUTTE le piattaforme oltre a linux windows e macos dovremmo usare
     ad esempio macro più generali (e.g. __unix__ (vedi link) )
     - per MacOS __APPLE__ (da far provare a Sofia)
+    prova
