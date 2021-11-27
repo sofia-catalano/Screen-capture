@@ -56,7 +56,7 @@ void ScreenRecorder::initializeInputSource(){
 
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
 
-    //TODO cambiare con offset_x offeset_y width e height
+    //TODO cambiare con offset_x offeset_y width height
     if(avformat_open_input(&format_context, ":0.0+10,250", input_format, &options) != 0){
          throw logic_error{"Error in opening input stream"};
     }
@@ -125,7 +125,7 @@ void ScreenRecorder::initializeOutputSource() {
 
     av_encodec = avcodec_find_encoder(AV_CODEC_ID_H264); //Abdullah: AV_CODEC_ID_MPEG4
     if (!av_encodec) {
-        throw logic_error{"Error in allocating av format output context"};
+        throw logic_error{"Error in allocating av format output context"}; // TODO non mi pare l'errore giusto
     }
 
     //we need to create new out stream into the output format context
@@ -136,10 +136,10 @@ void ScreenRecorder::initializeOutputSource() {
 
     out_codec_context = avcodec_alloc_context3(NULL); // TODO oppure av_encodec
     if( !out_codec_context){
-        throw runtime_error{error in allocating the codec contexts};
+        throw runtime_error{"Error in allocating the codec contexts"};
     }
 
-    //avcodec_parameters_to_context: fill this codec context with CODEC parameters
+    //avcodec_parameters_to_context: fill the output codec context with CODEC parameters
     avcodec_parameters_to_context(out_codec_context, video_st->codecpar);
 
     // set property of the video file
@@ -171,7 +171,7 @@ void ScreenRecorder::initializeOutputSource() {
         av_opt_set(out_codec_context, "crf", "10.0", 0);*/
     }
 
-    /* Some container formats (like MP4) require global headers to be present
+    /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
     if ( out_codec_context->oformat->flags & AVFMT_GLOBALHEADER){
         out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
