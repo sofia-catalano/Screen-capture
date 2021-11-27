@@ -133,7 +133,7 @@ void ScreenRecorder::initializeOutputSource() {
     }
 
     //we need to create new out stream into the output format context
-    video_st = avformat_new_stream(out_format_context, NULL);
+    video_st = avformat_new_stream(out_format_context, av_encodec); //inizialmente come secondo parametro avevamo messo NULL
     if( !video_st ){
         throw runtime_error{"Error creating a av format new stream"};
     }
