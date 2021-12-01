@@ -70,9 +70,15 @@ class ScreenRecorder {
 
     AVStream *video_st;
 
+    AVPacket *pPacket;
+    AVFrame *pFrame, *outFrame;
+    SwsContext* sws_ctx;
+
+
     //functions
     void initializeInputSource();
     void initializeOutputSource();
+    int captureVideoFrames();
 
 };
 

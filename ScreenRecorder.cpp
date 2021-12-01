@@ -16,6 +16,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
     initializeOutputSource();
     cout << "End initializeOutputSource" << endl;
 
+    captureVideoFrames();
     cout << "All required functions are registered successfully" << endl;
 }
 
@@ -107,7 +108,7 @@ void ScreenRecorder::initializeInputSource(){
     //open the codec
     //Initialize the AVCodecContext to use the given AVCodec
     //now the codec can be used
-    if (avcodec_open2(codec_context , av_decodec , NULL) < 0) {
+    if (avcodec_open2(codec_context, av_decodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
 }
@@ -133,7 +134,7 @@ void ScreenRecorder::initializeOutputSource() {
     }
 
     //we need to create new out stream into the output format context
-    video_st = avformat_new_stream(out_format_context, NULL);
+    video_st = avformat_new_stream(out_format_context, NULL); // TODO cheina av_encodec
     if( !video_st ){
         throw runtime_error{"Error creating a av format new stream"};
     }
@@ -161,18 +162,20 @@ void ScreenRecorder::initializeOutputSource() {
         out_codec_context->qmax = 10;
         out_codec_context->max_b_frames = 2;
     */
+
     if (out_codec_context->codec_id == AV_CODEC_ID_H264) {
         av_opt_set(out_codec_context, "preset", "ultrafast", 0); // encoding speed to compression ratio
        /* av_opt_set(out_codec_context, "tune", "zerolatency", 0);
         av_opt_set(out_codec_context, "cabac", "1", 0);
-        av_opt_set(out_codec_context, "ref", "3", 0);
+        av_opt_set(out_codec_context, "ref", "3", 0); // 2
         av_opt_set(out_codec_context, "deblock", "1:0:0", 0);
         av_opt_set(out_codec_context, "analyse", "0x3:0x113", 0);
         av_opt_set(out_codec_context, "subme", "7", 0);
-        av_opt_set(out_codec_context, "chroma_qp_offset", "4", 0);
+        av_opt_set(out_codec_context, "chroma_qp_offset", "-2", 0);
         av_opt_set(out_codec_context, "rc", "crf", 0);
-        av_opt_set(out_codec_context, "rc_lookahead", "40", 0);
-        av_opt_set(out_codec_context, "crf", "10.0", 0);*/
+        av_opt_set(out_codec_context, "rc_lookahead", "30", 0);
+        av_opt_set(out_codec_context, "crf", "16.0", 0); //Recommended values are from 15–35.
+        */
     }
 
     /* Some container formats like MP4 require global headers to be present.
@@ -186,6 +189,62 @@ void ScreenRecorder::initializeOutputSource() {
     if (avcodec_open2(out_codec_context, av_encodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
+}
+
+int ScreenRecorder::captureVideoFrames(){
+    //We allocate memory for AVPacket and AVFrame
+    //in order to read the packets from the stream and decode them into frames
+    pPacket = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
+    if( !pPacket ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }
+    pFrame = av_frame_alloc(); //Allocate an AVFrame and set its fields to default values
+    if( !pFrame ){
+        throw logic_error{"Error in allocate memory to AVFrame"};
+    }
+
+    outFrame = av_frame_alloc();
+    if( !outFrame ){
+        throw logic_error{"Error in allocate memory to AVFrame"};
+    }
+
+    int video_outbuf_size;
+
+    //Return the size in bytes of the amount of data required to store an image with the given parameters.
+    int nbytes =  av_image_get_buffer_size(out_codec_context->pix_fmt,out_codec_context->width,out_codec_context->height,32);
+    uint8_t *video_outbuf = (uint8_t*)av_malloc(nbytes);
+    if( video_outbuf == NULL ){
+        throw logic_error{"Error in allocate memory to buffer"};
+    }
+    // Setup the data pointers and linesizes based on the specified image parameters and the provided array.
+    // returns: the size in bytes required for video_outbuf
+    if(av_image_fill_arrays( outFrame->data, outFrame->linesize, video_outbuf, AV_PIX_FMT_YUV420P, out_codec_context->width, out_codec_context->height,1 ) < 0){
+        throw logic_error{"Error in filling image array"};
+    }
 
 
+
+    // Allocate and return swsContext.
+    // a pointer to an allocated context, or NULL in case of error
+    sws_ctx = sws_getContext(codec_context->width,
+                             codec_context->height,
+                             codec_context->pix_fmt,
+                             out_codec_context->width,
+                             out_codec_context->height,
+                             out_codec_context->pix_fmt,
+                             SWS_BICUBIC, NULL, NULL, NULL); //Color conversion and scaling. possibilities: SWS_FAST_BILINEAR, SWS_BILINEAR, SWS_BICUBIC
+
+
+
+
+
+
+    //Let's feed our packets from the streams with the function av_read_frame while it has packets
+    while (av_read_frame(format_context, pPacket) >= 0) {
+        //Let's send the raw data packet (compressed frame) to the decoder, through the codec context,
+        avcodec_send_packet(codec_context, pPacket);
+
+        //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame.
+        avcodec_receive_frame(codec_context, pFrame);
+    }
 }
