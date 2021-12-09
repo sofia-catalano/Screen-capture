@@ -10,19 +10,39 @@ using namespace std;
 
 
 ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
-    initializeInputSource();
-    cout << "End initializeInputSource" << endl;
+    try{
+        initializeInputSource();
+        cout << "End initializeInputSource" << endl;
 
-    initializeOutputSource();
-    cout << "End initializeOutputSource" << endl;
+        initializeOutputSource();
+        cout << "End initializeOutputSource" << endl;
 
-    captureVideoFrames();
-    cout << "All required functions are registered successfully" << endl;
+        initializeCaptureResources();
+        cout << "End initializeCaptureResources" << endl;
+
+        cout << "All required functions are registered successfully" << endl;
+
+    }catch(err){
+        cout << "All required functions are registered not successfully" << endl;
+        cout << err << endl;
+    }
 }
 
 ScreenRecorder::~ScreenRecorder(){
+    t_reading.get()->join();
+    t_converting.get()->join();
 
-};
+    av_write_trailer(out_format_context);
+
+    av_packet_free(outPacket);
+    //av_freep(video_buffer);
+    avformat_close_input(&format_context);
+    avio_close(out_format_context->pb);
+    avcodec_free_context(codec_context);
+    avcodec_free_context(out_codec_context);
+
+    cout << "Distruttore Screen Recorder" << endl;
+}
 
 
 void ScreenRecorder::initializeInputSource(){
@@ -111,6 +131,13 @@ void ScreenRecorder::initializeInputSource(){
     if (avcodec_open2(codec_context, av_decodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
+    /* create empty video file */
+    if ( !(out_format_context->flags & AVFMT_NOFILE) ){
+        if( avio_open(&out_format_context->pb , vi.output_file , AVIO_FLAG_WRITE) < 0 ){
+            throw logic_error{"Error creating the context for accessing the resource indicated by url"};
+        }
+    }
+
 }
 
 
@@ -189,17 +216,24 @@ void ScreenRecorder::initializeOutputSource() {
     if (avcodec_open2(out_codec_context, av_encodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
+
+    if(!out_format_context->nb_streams){
+        throw logic_error{"Error in finding a stream for the output file"};
+    }
+
+    /* imp: mp4 container or some advanced container file required header information*/
+    if(avformat_write_header(out_format_context , &options) < 0){
+        throw logic_error{"Error in writing the header context"};
+
+    }
+
 }
 
-int ScreenRecorder::captureVideoFrames(){
+void ScreenRecorder::initializeCaptureResources(){
     //We allocate memory for AVPacket and AVFrame
     //in order to read the packets from the stream and decode them into frames
-    pPacket = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
-    if( !pPacket ){
-        throw logic_error{"Error in allocate memory to AVPacket"};
-    }
-    pFrame = av_frame_alloc(); //Allocate an AVFrame and set its fields to default values
-    if( !pFrame ){
+    inFrame = av_frame_alloc(); //Allocate an AVFrame and set its fields to default values
+    if( !inFrame ){
         throw logic_error{"Error in allocate memory to AVFrame"};
     }
 
@@ -207,44 +241,138 @@ int ScreenRecorder::captureVideoFrames(){
     if( !outFrame ){
         throw logic_error{"Error in allocate memory to AVFrame"};
     }
+    outPacket = av_frame_alloc();
+    if( !outPacket ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }
 
-    int video_outbuf_size;
-
+    //Allocate an image with size w and h and pixel format pix_fmt, and fill pointers and linesizes accordingly.
+    if(av_image_alloc(outFrame->data, outFrame->linesize, out_codec_context->width, out_codec_context->height, out_codec_context->pix_fmt, 32 ) < 0){
+        throw logic_error{"Error in filling image array"};
+    };
+    /*
+     int v_outbuf_size;
     //Return the size in bytes of the amount of data required to store an image with the given parameters.
-    int nbytes =  av_image_get_buffer_size(out_codec_context->pix_fmt,out_codec_context->width,out_codec_context->height,32);
-    uint8_t *video_outbuf = (uint8_t*)av_malloc(nbytes);
-    if( video_outbuf == NULL ){
+    int nbytes =  av_image_get_buffer_size(out_codec_context->pix_fmt, out_codec_context->width, out_codec_context->height,32);
+
+    uint8_t *v_outbuf = (uint8_t*) av_malloc(nbytes);
+    if( v_outbuf == NULL ){
         throw logic_error{"Error in allocate memory to buffer"};
     }
     // Setup the data pointers and linesizes based on the specified image parameters and the provided array.
     // returns: the size in bytes required for video_outbuf
-    if(av_image_fill_arrays( outFrame->data, outFrame->linesize, video_outbuf, AV_PIX_FMT_YUV420P, out_codec_context->width, out_codec_context->height,1 ) < 0){
+    if(av_image_fill_arrays( outFrame->data, outFrame->linesize, v_outbuf, AV_PIX_FMT_YUV420P, out_codec_context->width, out_codec_context->height,1 ) < 0){
         throw logic_error{"Error in filling image array"};
     }
+     */
 
 
-
-    // Allocate and return swsContext.
-    // a pointer to an allocated context, or NULL in case of error
+    //setup swsContext: a pointer to an allocated context, or NULL in case of error.
+    //This allows us to compile the conversion we want, and then pass that in later to 'sws_scale'
+    //which is going to want our source width and height, our desired width and height,
+    // the source format and desired format, along with some other options and flags.
+    // initialize SWS context for software scaling
     sws_ctx = sws_getContext(codec_context->width,
                              codec_context->height,
                              codec_context->pix_fmt,
                              out_codec_context->width,
                              out_codec_context->height,
-                             out_codec_context->pix_fmt,
+                             out_codec_context->pix_fmt, //the native format of the frame
                              SWS_BICUBIC, NULL, NULL, NULL); //Color conversion and scaling. possibilities: SWS_FAST_BILINEAR, SWS_BILINEAR, SWS_BICUBIC
+}
 
 
+void ScreenRecorder::recording(){
+    end_reading = false;
+    t_reading = make_unique<thread>([this]() { this->read_packets(); });
+    t_converting = make_unique<thread>([this]() { this->convert_video_format(); });
+}
 
+void ScreenRecorder::read_packets(){
+    int nFrame = 100;
+    int i = 0;
+     while (true){
+         if(i++ == nFrame){
+             break;
+         }
+         //We allocate memory for AVPacket in order to read the packets from the stream
+         inPacket = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
+         if( !inPacket ){
+             throw logic_error{"Error in allocate memory to AVPacket"};
+         }
+         //Let's feed our packets from the streams with the function av_read_frame while it has packets
+         if(av_read_frame(format_context, inPacket) < 0){
+             throw logic_error{"Error in getting inPacket"};
+         }
+         inPacket_mutex.lock();
+         inPacket_queue.push(inPacket);
+         inPacket_mutex.unlock();
+     }
 
+    inPacket_mutex.lock();
+    end_reading = true;
+    inPacket_mutex.unlock();
+}
 
+void ScreenRecorder::convert_video_format() {
+    int j = 0;
+    int value = 0;
+    int got_picture = 0;
 
-    //Let's feed our packets from the streams with the function av_read_frame while it has packets
-    while (av_read_frame(format_context, pPacket) >= 0) {
-        //Let's send the raw data packet (compressed frame) to the decoder, through the codec context,
-        avcodec_send_packet(codec_context, pPacket);
+    while(!end_reading || !inPacket_queue.empty()){
+        inPacket_mutex.lock();
+        if(!inPacket_queue.empty()){
+            inPacket = inPacket_queue.front();
+            inPacket_queue.pop():
+            inPacket_mutex.unlock();
+            if(inPacket->stream_index == video_index){
+                //decode video frame
+                //let's send the raw data packet (compressed frame) to the decoder, through the codec context
+                value = avcodec_send_packet(codec_context, inPacket);
+                av_frame_unref(inPacket); // reset packet to its original state, free all the buffers
+                av_frame_free(inPacket); //pointer to null //TODO tolto &
+                cout<<"inPacket: "<<inPacket<<endl;
+            }
+            if (value < 0) {
+                throw runtime_error("Error in decoding video (send_packet)");
+            }
+            //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame
+            if(avcodec_receive_frame(codec_context, inFrame) == 0){ // frame successfully decoded
+                //Fine decode
 
-        //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame.
-        avcodec_receive_frame(codec_context, pFrame);
+                // Convert the image from its native format to YUV
+                sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
+                          codec_context->height, outFrame->data, outFrame->linesize);
+                outPacket->data = NULL;
+                outPacket->size = 0;
+
+                //encode video frame
+                value = avcodec_send_frame(out_codec_context, outFrame);
+                got_picture = avcodec_receive_packet(out_codec_context, outPacket);
+                if(value == 0 && got_picture == 0){
+                    if(outPacket.pts != AV_NOPTS_VALUE)
+                        outPacket.pts = av_rescale_q(outPacket.pts, video_st->codec->time_base, video_st->time_base);
+                    if(outPacket.dts != AV_NOPTS_VALUE)
+                        outPacket.dts = av_rescale_q(outPacket.dts, video_st->codec->time_base, video_st->time_base);
+               //TODO vedere se ci va un lock per la scrittura
+                    if(av_write_frame(out_format_context , &outPacket) != 0){
+                        throw runtime_error("Error in writing video frame");
+                    }
+                    av_packet_unref(&outPacket);
+                }else{
+                    throw runtime_error("Error in encoding video (send_frame or receive_packet)");
+                }
+
+            }else{
+                throw runtime_error("Error in decoding video (receive_frame)");
+            }
+
+        }
     }
 }
+
+inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
+rawpkt-> outFrame -> YUVFrame -> pkt
+
+
+

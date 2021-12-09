@@ -11,6 +11,9 @@
 #include <fstream>
 #include <string>
 #include <math.h>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 using namespace std;
 
@@ -70,15 +73,23 @@ class ScreenRecorder {
 
     AVStream *video_st;
 
-    AVPacket *pPacket;
-    AVFrame *pFrame, *outFrame;
-    SwsContext* sws_ctx;
+    AVPacket *inPacket, *outPacket;
+    AVFrame *inFrame, *outFrame;
+    SwsContext *sws_ctx;
+    queue<AVPacket *> inPacket_queue;
+    mutex inPacket_mutex;
+    bool end_reading;
 
+    unique_ptr<thread> t_reading;
+    unique_ptr<thread> t_converting;
 
     //functions
     void initializeInputSource();
     void initializeOutputSource();
-    int captureVideoFrames();
+    void initializeCaptureResources();
+    void recording();
+    void read_packets();
+    void convert_video_format();
 
 };
 
