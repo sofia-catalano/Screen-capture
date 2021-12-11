@@ -22,9 +22,9 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
 
         cout << "All required functions are registered successfully" << endl;
 
-    }catch(err){
+    }catch(exception &err){
         cout << "All required functions are registered not successfully" << endl;
-        cout << err << endl;
+        cout << (err.what()) << endl;
     }
 }
 
@@ -34,12 +34,12 @@ ScreenRecorder::~ScreenRecorder(){
 
     av_write_trailer(out_format_context);
 
-    av_packet_free(outPacket);
+    av_packet_free(&outPacket);
     //av_freep(video_buffer);
     avformat_close_input(&format_context);
     avio_close(out_format_context->pb);
-    avcodec_free_context(codec_context);
-    avcodec_free_context(out_codec_context);
+    avcodec_free_context(&codec_context);
+    avcodec_free_context(&out_codec_context);
 
     cout << "Distruttore Screen Recorder" << endl;
 }
@@ -133,7 +133,7 @@ void ScreenRecorder::initializeInputSource(){
     }
     /* create empty video file */
     if ( !(out_format_context->flags & AVFMT_NOFILE) ){
-        if( avio_open(&out_format_context->pb , vi.output_file , AVIO_FLAG_WRITE) < 0 ){
+        if( avio_open(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE) < 0 ){
             throw logic_error{"Error creating the context for accessing the resource indicated by url"};
         }
     }
@@ -241,7 +241,7 @@ void ScreenRecorder::initializeCaptureResources(){
     if( !outFrame ){
         throw logic_error{"Error in allocate memory to AVFrame"};
     }
-    outPacket = av_frame_alloc();
+    outPacket = av_packet_alloc();
     if( !outPacket ){
         throw logic_error{"Error in allocate memory to AVPacket"};
     }
@@ -323,14 +323,14 @@ void ScreenRecorder::convert_video_format() {
         inPacket_mutex.lock();
         if(!inPacket_queue.empty()){
             inPacket = inPacket_queue.front();
-            inPacket_queue.pop():
+            inPacket_queue.pop();
             inPacket_mutex.unlock();
             if(inPacket->stream_index == video_index){
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
                 value = avcodec_send_packet(codec_context, inPacket);
-                av_frame_unref(inPacket); // reset packet to its original state, free all the buffers
-                av_frame_free(inPacket); //pointer to null //TODO tolto &
+                av_packet_unref(inPacket); // reset packet to its original state, free all the buffers
+                av_packet_free(&inPacket); //pointer to null //TODO tolto &
                 cout<<"inPacket: "<<inPacket<<endl;
             }
             if (value < 0) {
@@ -350,15 +350,15 @@ void ScreenRecorder::convert_video_format() {
                 value = avcodec_send_frame(out_codec_context, outFrame);
                 got_picture = avcodec_receive_packet(out_codec_context, outPacket);
                 if(value == 0 && got_picture == 0){
-                    if(outPacket.pts != AV_NOPTS_VALUE)
-                        outPacket.pts = av_rescale_q(outPacket.pts, video_st->codec->time_base, video_st->time_base);
-                    if(outPacket.dts != AV_NOPTS_VALUE)
-                        outPacket.dts = av_rescale_q(outPacket.dts, video_st->codec->time_base, video_st->time_base);
+                    if(outPacket->pts != AV_NOPTS_VALUE)
+                        outPacket->pts = av_rescale_q(outPacket->pts, video_st->codec->time_base, video_st->time_base);
+                    if(outPacket->dts != AV_NOPTS_VALUE)
+                        outPacket->dts = av_rescale_q(outPacket->dts, video_st->codec->time_base, video_st->time_base);
                //TODO vedere se ci va un lock per la scrittura
-                    if(av_write_frame(out_format_context , &outPacket) != 0){
+                    if(av_write_frame(out_format_context , outPacket) != 0){
                         throw runtime_error("Error in writing video frame");
                     }
-                    av_packet_unref(&outPacket);
+                    av_packet_unref(outPacket);
                 }else{
                     throw runtime_error("Error in encoding video (send_frame or receive_packet)");
                 }
@@ -371,8 +371,8 @@ void ScreenRecorder::convert_video_format() {
     }
 }
 
-inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
-rawpkt-> outFrame -> YUVFrame -> pkt
+//inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
+//rawpkt-> outFrame -> YUVFrame -> pkt
 
 
 
