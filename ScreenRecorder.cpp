@@ -211,7 +211,7 @@ void ScreenRecorder::initializeOutputSource() {
         out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
-    //open the codec
+    //open the codec (or better init the encoder)
     //Initialize the AVCodecContext to use the given AVCodec.
     if (avcodec_open2(out_codec_context, av_encodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
@@ -291,6 +291,13 @@ void ScreenRecorder::recording(){
 void ScreenRecorder::read_packets(){
     int nFrame = 100;
     int i = 0;
+
+    /*//We allocate memory for AVPacket in order to read the packets from the stream and push it into a queue
+    inPacket = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
+    if( !inPacket ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }*/
+
      while (true){
          if(i++ == nFrame){
              break;
@@ -300,6 +307,18 @@ void ScreenRecorder::read_packets(){
          if( !inPacket ){
              throw logic_error{"Error in allocate memory to AVPacket"};
          }
+
+         /* av_read_frame() Return the next frame of a stream.
+                 This function returns what is stored in the file, and does not validate that what is there are valid frames for the decoder.
+                 It will split what is stored in the file/context into frames and return one for each call. It will not omit invalid data between
+                 valid frames so as to give the decoder the maximum information possible for decoding.
+
+                 On success, the returned packet is reference-counted (pkt->buf is set) and valid indefinitely. The packet must be freed
+                 with av_packet_unref() when it is no longer needed. For video, the packet contains exactly one frame. For audio, it contains
+                 an integer number of frames if each frame has a known fixed size (e.g. PCM or ADPCM data). If the audio frames have a
+                 variable size (e.g. MPEG audio), then it contains one frame.
+
+                 pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
          if(av_read_frame(format_context, inPacket) < 0){
              throw logic_error{"Error in getting inPacket"};
@@ -307,11 +326,18 @@ void ScreenRecorder::read_packets(){
          inPacket_mutex.lock();
          inPacket_queue.push(inPacket);
          inPacket_mutex.unlock();
+
+
      }
 
     inPacket_mutex.lock();
     end_reading = true;
     inPacket_mutex.unlock();
+
+    /*
+     av_packet_unref(inPacket);
+    av_packet_free(&inPacket);//Free the packet and its pointer will be set to null
+     */
 }
 
 void ScreenRecorder::convert_video_format() {
@@ -319,19 +345,26 @@ void ScreenRecorder::convert_video_format() {
     int value = 0;
     int got_picture = 0;
 
+    //We allocate memory for AVPacket in order to extract the packets from the queue and decode and encode it
+    inPacket2 = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
+    if( !inPacket2 ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }
+
     while(!end_reading || !inPacket_queue.empty()){
         inPacket_mutex.lock();
         if(!inPacket_queue.empty()){
-            inPacket = inPacket_queue.front();
+            inPacket2 = inPacket_queue.front();
             inPacket_queue.pop();
             inPacket_mutex.unlock();
-            if(inPacket->stream_index == video_index){
+            if(inPacket2->stream_index == video_index){
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
-                value = avcodec_send_packet(codec_context, inPacket);
-                av_packet_unref(inPacket); // reset packet to its original state, free all the buffers
-                av_packet_free(&inPacket); //pointer to null //TODO tolto &
-                cout<<"inPacket: "<<inPacket<<endl;
+                value = avcodec_send_packet(codec_context, inPacket2);
+
+                //av_packet_unref(inPacket2);
+                av_packet_free(&inPacket2);//Free the packet and its pointer will be set to null
+                cout<<"inPacket: "<<inPacket2<<endl;
             }
             if (value < 0) {
                 throw runtime_error("Error in decoding video (send_packet)");
@@ -358,7 +391,8 @@ void ScreenRecorder::convert_video_format() {
                     if(av_write_frame(out_format_context , outPacket) != 0){
                         throw runtime_error("Error in writing video frame");
                     }
-                    av_packet_unref(outPacket);
+                    //av_packet_unref(outPacket);
+                    av_packet_free(&outPacket);
                 }else{
                     throw runtime_error("Error in encoding video (send_frame or receive_packet)");
                 }
@@ -369,6 +403,7 @@ void ScreenRecorder::convert_video_format() {
 
         }
     }
+
 }
 
 //inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
