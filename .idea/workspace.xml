@@ -13,8 +13,9 @@
   <component name="ChangeListManager">
     <list default="true" id="c23da32e-1584-43f4-9912-30b24d2ed38c" name="Default Changelist" comment="risolti alcuni errori">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ScreenRecorder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ScreenRecorder.h" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,6 +44,7 @@
     <property name="cidr.known.project.marker" value="true" />
     <property name="cmake.loaded.for.project" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="nodejs_package_manager_path" value="npm" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -81,7 +83,7 @@
       <workItem from="1635068376762" duration="1496000" />
       <workItem from="1637158503898" duration="85000" />
       <workItem from="1637158645020" duration="8471000" />
-      <workItem from="1639067552699" duration="14043000" />
+      <workItem from="1639067552699" duration="22331000" />
     </task>
     <task id="LOCAL-00001" summary="Add C++ project">
       <created>1634119161472</created>
@@ -104,7 +106,14 @@
       <option name="project" value="LOCAL" />
       <updated>1639236726595</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="risolti alcuni errori">
+      <created>1639332098312</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1639332098312</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

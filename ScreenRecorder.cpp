@@ -292,12 +292,6 @@ void ScreenRecorder::read_packets(){
     int nFrame = 100;
     int i = 0;
 
-    /*//We allocate memory for AVPacket in order to read the packets from the stream and push it into a queue
-    inPacket = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
-    if( !inPacket ){
-        throw logic_error{"Error in allocate memory to AVPacket"};
-    }*/
-
      while (true){
          if(i++ == nFrame){
              break;
@@ -346,61 +340,70 @@ void ScreenRecorder::convert_video_format() {
     int got_picture = 0;
 
     //We allocate memory for AVPacket in order to extract the packets from the queue and decode and encode it
-    inPacket2 = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
+    /*inPacket2 = av_packet_alloc(); //allocate memory to a packet and set its fields to default values
     if( !inPacket2 ){
         throw logic_error{"Error in allocate memory to AVPacket"};
-    }
+    }*/
 
     while(!end_reading || !inPacket_queue.empty()){
         inPacket_mutex.lock();
-        if(!inPacket_queue.empty()){
+        if(!inPacket_queue.empty()) {
             inPacket2 = inPacket_queue.front();
             inPacket_queue.pop();
             inPacket_mutex.unlock();
-            if(inPacket2->stream_index == video_index){
+            if (inPacket2->stream_index == video_index) {
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
                 value = avcodec_send_packet(codec_context, inPacket2);
-
-                //av_packet_unref(inPacket2);
+                if (value < 0) {
+                    throw runtime_error("Error in decoding video (send_packet)");
+                }
                 av_packet_free(&inPacket2);//Free the packet and its pointer will be set to null
-                cout<<"inPacket: "<<inPacket2<<endl;
-            }
-            if (value < 0) {
-                throw runtime_error("Error in decoding video (send_packet)");
-            }
-            //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame
-            if(avcodec_receive_frame(codec_context, inFrame) == 0){ // frame successfully decoded
-                //Fine decode
 
-                // Convert the image from its native format to YUV
-                sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
-                          codec_context->height, outFrame->data, outFrame->linesize);
-                outPacket->data = NULL;
-                outPacket->size = 0;
+                //-------------------------------------------------
+                //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame
+                if(avcodec_receive_frame(codec_context, inFrame) == 0){ // frame successfully decoded
+                    //Fine decode
 
-                //encode video frame
-                value = avcodec_send_frame(out_codec_context, outFrame);
-                got_picture = avcodec_receive_packet(out_codec_context, outPacket);
-                if(value == 0 && got_picture == 0){
-                    if(outPacket->pts != AV_NOPTS_VALUE)
-                        outPacket->pts = av_rescale_q(outPacket->pts, video_st->codec->time_base, video_st->time_base);
-                    if(outPacket->dts != AV_NOPTS_VALUE)
-                        outPacket->dts = av_rescale_q(outPacket->dts, video_st->codec->time_base, video_st->time_base);
-               //TODO vedere se ci va un lock per la scrittura
-                    if(av_write_frame(out_format_context , outPacket) != 0){
-                        throw runtime_error("Error in writing video frame");
+                    // Convert the image from its native format to YUV
+                    sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
+                              codec_context->height, outFrame->data, outFrame->linesize);
+
+                    //encode video frame
+                    value = avcodec_send_frame(out_codec_context, outFrame);
+
+                    //avcodec_receive_packet fa internamente l'av_packet_unref dell'outPacket prima di copiarci dentro il contenuto
+                    //del nuovo pacchetto ricevuto dall'encoder : quindi resetta il contenuto e libera i buffer interni
+                    got_picture = avcodec_receive_packet(out_codec_context, outPacket);
+                    if(value == 0 && got_picture == 0){
+                        if(outPacket->pts != AV_NOPTS_VALUE)
+                            outPacket->pts = av_rescale_q(outPacket->pts, video_st->time_base, video_st->time_base);
+                        if(outPacket->dts != AV_NOPTS_VALUE)
+                            outPacket->dts = av_rescale_q(outPacket->dts, video_st->time_base, video_st->time_base);
+
+                        //TODO vedere se ci va un lock per la scrittura :
+                        //TODO ci va per la sincronizzazione dei thread audio e video che scriveranno sullo stesso file di output
+                        if(av_write_frame(out_format_context , outPacket) != 0){
+                            throw runtime_error("Error in writing video frame");
+                        }
+                        //TODO qui ci va invece l'unlock
+
+
+                    }else{
+                        throw runtime_error("Error in encoding video (send_frame or receive_packet)");
                     }
-                    //av_packet_unref(outPacket);
-                    av_packet_free(&outPacket);
+
                 }else{
-                    throw runtime_error("Error in encoding video (send_frame or receive_packet)");
+                    throw runtime_error("Error in decoding video (receive_frame)");
                 }
 
-            }else{
-                throw runtime_error("Error in decoding video (receive_frame)");
+
+
+                cout << "inPacket: " << inPacket2 << endl;
             }
 
+        }else{
+            inPacket_mutex.unlock();
         }
     }
 
