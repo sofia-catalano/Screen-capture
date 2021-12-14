@@ -67,7 +67,7 @@ class ScreenRecorder {
     AVCodec *av_encodec, *av_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
     AVInputFormat *input_format;
     AVDictionary *options;
-    int video_index;
+    int video_index, out_video_index;
 
     AVCodecContext *codec_context, *out_codec_context;
     AVCodecParameters *codec_parameters;

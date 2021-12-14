@@ -17,7 +17,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
         initializeOutputSource();
         cout << "End initializeOutputSource" << endl;
 
-        initializeCaptureResources();
+        //initializeCaptureResources();
         cout << "End initializeCaptureResources" << endl;
 
         cout << "All required functions are registered successfully" << endl;
@@ -29,7 +29,8 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
 }
 
 ScreenRecorder::~ScreenRecorder(){
-    t_reading.get()->join();
+
+    /*t_reading.get()->join();
     t_converting.get()->join();
 
     av_write_trailer(out_format_context);
@@ -39,7 +40,7 @@ ScreenRecorder::~ScreenRecorder(){
     avformat_close_input(&format_context);
     avio_close(out_format_context->pb);
     avcodec_free_context(&codec_context);
-    avcodec_free_context(&out_codec_context);
+    avcodec_free_context(&out_codec_context);*/
 
     cout << "Distruttore Screen Recorder" << endl;
 }
@@ -51,11 +52,13 @@ void ScreenRecorder::initializeInputSource(){
     //need to be call once
     avdevice_register_all();
 
+
     options = nullptr;
 
     //allocate memory to the component AVFormatContext that will hold information about the format
     format_context = nullptr;
     format_context = avformat_alloc_context();
+
 
     input_format = av_find_input_format("x11grab");
     if (input_format == nullptr) {
@@ -117,10 +120,12 @@ void ScreenRecorder::initializeInputSource(){
         throw logic_error{"Error in finding the decoder"};
     }
 
+
     //allocate memory for the AVCodecContext that will hold the context for the decode/encode process
     /* This AVCodecContext contains all the information about the codec that the stream is using,
     and now we have a pointer to it*/
     codec_context = avcodec_alloc_context3(NULL); //TODO oppure av_decodec
+
 
     //now fill this codec_context with CODEC parameters
      avcodec_parameters_to_context(codec_context, codec_parameters);
@@ -131,12 +136,8 @@ void ScreenRecorder::initializeInputSource(){
     if (avcodec_open2(codec_context, av_decodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
-    /* create empty video file */
-    if ( !(out_format_context->flags & AVFMT_NOFILE) ){
-        if( avio_open(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE) < 0 ){
-            throw logic_error{"Error creating the context for accessing the resource indicated by url"};
-        }
-    }
+
+
 
 }
 
@@ -146,6 +147,8 @@ void ScreenRecorder::initializeOutputSource() {
     which best matches the provided parameters, or returns NULL if there is no match. */
     output_format = nullptr;
     output_format = av_guess_format(NULL, vi.output_file.c_str(), NULL);
+
+
 
     //TODO capire null e nullptr
     if (output_format == NULL) {
@@ -161,18 +164,19 @@ void ScreenRecorder::initializeOutputSource() {
     }
 
     //we need to create new out stream into the output format context
-    video_st = avformat_new_stream(out_format_context, NULL); // TODO cheina av_encodec
+    video_st = avformat_new_stream(out_format_context, av_encodec); // TODO cheina av_encodec
     if( !video_st ){
         throw runtime_error{"Error creating a av format new stream"};
     }
 
-    out_codec_context = avcodec_alloc_context3(NULL); // TODO oppure av_encodec
+    out_codec_context = avcodec_alloc_context3(av_encodec); // TODO oppure av_encodec
     if( !out_codec_context){
         throw runtime_error{"Error in allocating the codec contexts"};
     }
 
     //avcodec_parameters_to_context: fill the output codec context with CODEC parameters
     avcodec_parameters_to_context(out_codec_context, video_st->codecpar);
+
 
     // set property of the video file
     out_codec_context->codec_id = AV_CODEC_ID_H264; // AV_CODEC_ID_MPEG4
@@ -217,15 +221,45 @@ void ScreenRecorder::initializeOutputSource() {
         throw logic_error{"Error in opening the av codec"};
     }
 
+
+
     if(!out_format_context->nb_streams){
+        throw logic_error{"Error output file does not contain any stream"};
+    }
+
+    out_video_index = -1;
+    for (int i = 0; i < out_format_context->nb_streams; i++) {
+        if (out_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_UNKNOWN) {
+            out_video_index = i;
+        }
+    }
+
+    if(out_video_index==-1){
         throw logic_error{"Error in finding a stream for the output file"};
     }
+
+    avcodec_parameters_from_context(out_format_context->streams[out_video_index]->codecpar, out_codec_context);
+
+
+    /* create empty video file */
+    if ( !(out_format_context->flags & AVFMT_NOFILE) ){
+        cout << "prova222" << endl;
+        if( avio_open2(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE,NULL,NULL) < 0 ){
+            throw logic_error{"Error creating the context for accessing the resource indicated by url"};
+        }
+    }
+
+
+    cout<<"ciao"<<endl;
+
+
 
     /* imp: mp4 container or some advanced container file required header information*/
     if(avformat_write_header(out_format_context , &options) < 0){
         throw logic_error{"Error in writing the header context"};
 
     }
+    cout << "prova Y" << endl;
 
 }
 

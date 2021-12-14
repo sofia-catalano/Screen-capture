@@ -13,8 +13,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c23da32e-1584-43f4-9912-30b24d2ed38c" name="Default Changelist" comment="risolti alcuni errori">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ScreenRecorder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ScreenRecorder.h" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -83,7 +83,7 @@
       <workItem from="1635068376762" duration="1496000" />
       <workItem from="1637158503898" duration="85000" />
       <workItem from="1637158645020" duration="8471000" />
-      <workItem from="1639067552699" duration="22331000" />
+      <workItem from="1639067552699" duration="31166000" />
     </task>
     <task id="LOCAL-00001" summary="Add C++ project">
       <created>1634119161472</created>
@@ -113,7 +113,14 @@
       <option name="project" value="LOCAL" />
       <updated>1639332098312</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="risolti alcuni errori">
+      <created>1639392266364</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1639392266364</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
