@@ -17,7 +17,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
         initializeOutputSource();
         cout << "End initializeOutputSource" << endl;
 
-        //initializeCaptureResources();
+        initializeCaptureResources();
         cout << "End initializeCaptureResources" << endl;
 
         cout << "All required functions are registered successfully" << endl;
@@ -30,17 +30,22 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
 
 ScreenRecorder::~ScreenRecorder(){
 
-    /*t_reading.get()->join();
-    t_converting.get()->join();
+    cout<<"ciao2"<<endl;
+
+    t_reading->join();
+    cout<<"ciao3"<<endl;
+    t_converting->join();
+
 
     av_write_trailer(out_format_context);
 
     av_packet_free(&outPacket);
     //av_freep(video_buffer);
+    cout<<"ciao"<<endl;
     avformat_close_input(&format_context);
     avio_close(out_format_context->pb);
     avcodec_free_context(&codec_context);
-    avcodec_free_context(&out_codec_context);*/
+    avcodec_free_context(&out_codec_context);
 
     cout << "Distruttore Screen Recorder" << endl;
 }
@@ -243,14 +248,11 @@ void ScreenRecorder::initializeOutputSource() {
 
     /* create empty video file */
     if ( !(out_format_context->flags & AVFMT_NOFILE) ){
-        cout << "prova222" << endl;
         if( avio_open2(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE,NULL,NULL) < 0 ){
             throw logic_error{"Error creating the context for accessing the resource indicated by url"};
         }
     }
 
-
-    cout<<"ciao"<<endl;
 
 
 
@@ -259,8 +261,8 @@ void ScreenRecorder::initializeOutputSource() {
         throw logic_error{"Error in writing the header context"};
 
     }
-    cout << "prova Y" << endl;
 
+    /**/
 }
 
 void ScreenRecorder::initializeCaptureResources(){
@@ -313,20 +315,27 @@ void ScreenRecorder::initializeCaptureResources(){
                              out_codec_context->height,
                              out_codec_context->pix_fmt, //the native format of the frame
                              SWS_BICUBIC, NULL, NULL, NULL); //Color conversion and scaling. possibilities: SWS_FAST_BILINEAR, SWS_BILINEAR, SWS_BICUBIC
+
+    outFrame->width=codec_context->width;
+    outFrame->height=codec_context->height;
+    outFrame->format = AV_PIX_FMT_YUV420P;
 }
 
 
 void ScreenRecorder::recording(){
     end_reading = false;
     t_reading = make_unique<thread>([this]() { this->read_packets(); });
+    cout<<"ookk"<<endl;
     t_converting = make_unique<thread>([this]() { this->convert_video_format(); });
 }
 
 void ScreenRecorder::read_packets(){
-    int nFrame = 100;
+    int nFrame = 900;
     int i = 0;
 
      while (true){
+         cout<<i<<endl;
+
          if(i++ == nFrame){
              break;
          }
@@ -369,7 +378,7 @@ void ScreenRecorder::read_packets(){
 }
 
 void ScreenRecorder::convert_video_format() {
-    int j = 0;
+    int j = 0, i=0;
     int value = 0;
     int got_picture = 0;
 
@@ -380,8 +389,12 @@ void ScreenRecorder::convert_video_format() {
     }*/
 
     while(!end_reading || !inPacket_queue.empty()){
+
         inPacket_mutex.lock();
         if(!inPacket_queue.empty()) {
+            j++;
+            cout<<"decoding : "<<j<<endl;
+
             inPacket2 = inPacket_queue.front();
             inPacket_queue.pop();
             inPacket_mutex.unlock();
@@ -403,31 +416,54 @@ void ScreenRecorder::convert_video_format() {
                     sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
                               codec_context->height, outFrame->data, outFrame->linesize);
 
+                    outFrame->pts = (int64_t)i * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;;
+
+
+
                     //encode video frame
                     value = avcodec_send_frame(out_codec_context, outFrame);
 
                     //avcodec_receive_packet fa internamente l'av_packet_unref dell'outPacket prima di copiarci dentro il contenuto
                     //del nuovo pacchetto ricevuto dall'encoder : quindi resetta il contenuto e libera i buffer interni
                     got_picture = avcodec_receive_packet(out_codec_context, outPacket);
-                    if(value == 0 && got_picture == 0){
-                        if(outPacket->pts != AV_NOPTS_VALUE)
-                            outPacket->pts = av_rescale_q(outPacket->pts, video_st->time_base, video_st->time_base);
-                        if(outPacket->dts != AV_NOPTS_VALUE)
-                            outPacket->dts = av_rescale_q(outPacket->dts, video_st->time_base, video_st->time_base);
+                    if(value == 0 ){
+                        if(got_picture == 0){
+                            //if got_picture is 0, we have enough packets to have a frame
 
-                        //TODO vedere se ci va un lock per la scrittura :
-                        //TODO ci va per la sincronizzazione dei thread audio e video che scriveranno sullo stesso file di output
-                        if(av_write_frame(out_format_context , outPacket) != 0){
-                            throw runtime_error("Error in writing video frame");
+
+
+                            if(outPacket->pts != AV_NOPTS_VALUE) {
+                                outPacket->pts = (int64_t)i * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;
+                                cout<<" OUT_PACKET PTS :"<< outPacket->pts<<endl;
+                            }
+                            if(outPacket->dts != AV_NOPTS_VALUE) {
+                                outPacket->dts = (int64_t)i  * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;
+                                cout << " OUT_PACKET DTS :" << outPacket->pts << endl;
+                            }
+
+                            /*outPacket->pts = av_rescale_q(outPacket->pts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
+                            outPacket->dts = av_rescale_q(outPacket->dts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
+                            */
+
+
+                            /*outPacket->pts = av_rescale_q_rnd(outPacket->pts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base,(AVRounding) (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+                            outPacket->dts = av_rescale_q_rnd(outPacket->dts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base, (AVRounding) (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+                            outPacket->duration = av_rescale_q(outPacket->duration, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
+                            */
+
+                            //TODO vedere se ci va un lock per la scrittura :
+                            //TODO ci va per la sincronizzazione dei thread audio e video che scriveranno sullo stesso file di output
+                            if(av_write_frame(out_format_context , outPacket) != 0){
+                                throw runtime_error("Error in writing video frame");
+                            }
+                            //TODO qui ci va invece l'unlock
                         }
-                        //TODO qui ci va invece l'unlock
-
-
                     }else{
-                        throw runtime_error("Error in encoding video (send_frame or receive_packet)");
+                        throw runtime_error("Error in encoding video send_frame");
                     }
 
                 }else{
+
                     throw runtime_error("Error in decoding video (receive_frame)");
                 }
 
@@ -435,12 +471,18 @@ void ScreenRecorder::convert_video_format() {
 
                 cout << "inPacket: " << inPacket2 << endl;
             }
-
+            i++;
         }else{
             inPacket_mutex.unlock();
         }
     }
 
+}
+
+int ScreenRecorder::nextPTS()
+{
+    static int static_pts = 0;
+    return static_pts ++;
 }
 
 //inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket

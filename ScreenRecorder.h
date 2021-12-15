@@ -92,6 +92,7 @@ class ScreenRecorder {
     void initializeCaptureResources();
     void read_packets();
     void convert_video_format();
+    int nextPTS();
 
 };
 
