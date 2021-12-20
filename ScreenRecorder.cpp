@@ -232,9 +232,10 @@ void ScreenRecorder::initializeOutputSource() {
     out_codec_context->max_b_frames = 2;
     out_codec_context->time_base.num = 1;
     out_codec_context->time_base.den = 30; //framerate
+    out_codec_context->max_b_frames = 2;
     /*  out_codec_context->qmin = 5;
         out_codec_context->qmax = 10;
-        out_codec_context->max_b_frames = 2;
+
     */
 
     av_opt_set(out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
