@@ -58,21 +58,38 @@ void ScreenRecorder::initializeInputSource(){
     avdevice_register_all();
 
 
-    options = nullptr;
+    options = NULL ;
+    string desktop_str;
 
     //allocate memory to the component AVFormatContext that will hold information about the format
-    format_context = nullptr;
+    format_context = NULL;
     format_context = avformat_alloc_context();
 
 
-    input_format = av_find_input_format("x11grab");
-    if (input_format == nullptr) {
+#ifdef _WIN32
+
+    input_format = av_find_input_format("gdgrab");
+    if (input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
 
-    // TODO risolvere il fullscreen
-    //https://unix.stackexchange.com/questions/573121/get-current-screen-dimensions-via-xlib-using-c
-    //https://www.py4u.net/discuss/81858
+
+#elif __linux__
+
+    input_format = av_find_input_format("x11grab");
+    if (input_format == NULL) {
+        throw logic_error{"av_find_input_format not found..."};
+    }
+
+
+
+#elif __APPLE__
+#endif
+
+
+
+
+
 
 
     //AVDictionary to inform avformat_open_input and avformat_find_stream_info about all settings
@@ -87,12 +104,32 @@ void ScreenRecorder::initializeInputSource(){
         throw logic_error{"Error in setting dictionary value"};
     }
 
-    // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
 
-    //TODO cambiare con offset_x offeset_y width height
-    if(avformat_open_input(&format_context, ":0.0+10,250", input_format, &options) != 0){
-         throw logic_error{"Error in opening input stream"};
+#ifdef _WIN32
+
+    desktop_str = "desktop";
+    // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
+    if(avformat_open_input(&format_context, desktop_str.c_str(), input_format, &options) != 0){
+        throw logic_error{"Error in opening input stream"};
     }
+
+#elif __linux__
+
+    // TODO risolvere il fullscreen
+    //https://unix.stackexchange.com/questions/573121/get-current-screen-dimensions-via-xlib-using-c
+    //https://www.py4u.net/discuss/81858
+
+    desktop_str=":0.0+"+ to_string(vi.offset_x)+","+ to_string(vi.offset_y);
+
+    // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
+    if(avformat_open_input(&format_context, desktop_str.c_str(), input_format, &options) != 0){
+        throw logic_error{"Error in opening input stream"};
+    }
+
+#elif __APPLE__
+#endif
+
+
     //avformat_open_input: only looks at the header, so next we need to check out the stream information in the file
     // avformat_find_stream_info populates the format_context->streams with proper information
     // format_context->nb_streams will hold the size of the array streams (number of streams)
@@ -121,7 +158,7 @@ void ScreenRecorder::initializeInputSource(){
     //it will find the registered decoder for the codec id and return an AVCodec
     //AVCodec is the component that knows how to enCode and DECode the stream
     av_decodec = avcodec_find_decoder(codec_parameters->codec_id);
-    if(av_decodec == nullptr){
+    if(av_decodec == NULL){
         throw logic_error{"Error in finding the decoder"};
     }
 
@@ -150,7 +187,7 @@ void ScreenRecorder::initializeInputSource(){
 void ScreenRecorder::initializeOutputSource() {
     /* Returns the output format in the list of registered output formats
     which best matches the provided parameters, or returns NULL if there is no match. */
-    output_format = nullptr;
+    output_format = NULL;
     output_format = av_guess_format(NULL, vi.output_file.c_str(), NULL);
 
 
@@ -188,8 +225,8 @@ void ScreenRecorder::initializeOutputSource() {
     out_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
     out_codec_context->pix_fmt  = AV_PIX_FMT_YUV420P;
     out_codec_context->bit_rate = 400000; // 80000
-    out_codec_context->width = 1920; // (int)(rrs.width * vs.quality) / 32 * 32;
-    out_codec_context->height = 1080; // (int)(rrs.height * vs.quality) / 2 * 2;
+    out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
+    out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
     out_codec_context->gop_size = 3; //50
     out_codec_context->max_b_frames = 2;
     out_codec_context->time_base.num = 1;
@@ -199,20 +236,7 @@ void ScreenRecorder::initializeOutputSource() {
         out_codec_context->max_b_frames = 2;
     */
 
-    if (out_codec_context->codec_id == AV_CODEC_ID_H264) {
-        av_opt_set(out_codec_context, "preset", "ultrafast", 0); // encoding speed to compression ratio
-       /* av_opt_set(out_codec_context, "tune", "zerolatency", 0);
-        av_opt_set(out_codec_context, "cabac", "1", 0);
-        av_opt_set(out_codec_context, "ref", "3", 0); // 2
-        av_opt_set(out_codec_context, "deblock", "1:0:0", 0);
-        av_opt_set(out_codec_context, "analyse", "0x3:0x113", 0);
-        av_opt_set(out_codec_context, "subme", "7", 0);
-        av_opt_set(out_codec_context, "chroma_qp_offset", "-2", 0);
-        av_opt_set(out_codec_context, "rc", "crf", 0);
-        av_opt_set(out_codec_context, "rc_lookahead", "30", 0);
-        av_opt_set(out_codec_context, "crf", "16.0", 0); //Recommended values are from 15–35.
-        */
-    }
+    av_opt_set(out_codec_context, "preset", "ultrafast", 0); // encoding speed to compression ratio
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
@@ -330,7 +354,7 @@ void ScreenRecorder::recording(){
 }
 
 void ScreenRecorder::read_packets(){
-    int nFrame = 900;
+    int nFrame = 400;
     int i = 0;
 
      while (true){
@@ -479,11 +503,7 @@ void ScreenRecorder::convert_video_format() {
 
 }
 
-int ScreenRecorder::nextPTS()
-{
-    static int static_pts = 0;
-    return static_pts ++;
-}
+
 
 //inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
 //rawpkt-> outFrame -> YUVFrame -> pkt

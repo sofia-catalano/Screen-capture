@@ -12,9 +12,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c23da32e-1584-43f4-9912-30b24d2ed38c" name="Default Changelist" comment="prova">
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ScreenRecorder.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ScreenRecorder.h" beforeDir="false" afterPath="$PROJECT_DIR$/ScreenRecorder.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,6 +27,10 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectId" id="1zRl6meFo5NNlNSHkZYDWiyI6gZ" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
@@ -51,17 +55,7 @@
     </key>
   </component>
   <component name="RunManager">
-    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
-      <method v="2">
-        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
-      </method>
-    </configuration>
     <configuration name="Screen-capture" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/main.cpp" EXPLICIT_BUILD_TARGET_NAME="all">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
-    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -82,7 +76,9 @@
       <workItem from="1635068376762" duration="1496000" />
       <workItem from="1637158503898" duration="85000" />
       <workItem from="1637158645020" duration="8471000" />
-      <workItem from="1639067552699" duration="41479000" />
+      <workItem from="1639067552699" duration="53116000" />
+      <workItem from="1639763456507" duration="3371000" />
+      <workItem from="1639947717870" duration="4625000" />
     </task>
     <task id="LOCAL-00001" summary="Add C++ project">
       <created>1634119161472</created>
@@ -126,7 +122,14 @@
       <option name="project" value="LOCAL" />
       <updated>1639478875504</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="prova">
+      <created>1639569143286</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1639569143286</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -142,7 +145,6 @@
         </entry>
       </map>
     </option>
-    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Add C++ project" />
