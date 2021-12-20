@@ -68,7 +68,7 @@ void ScreenRecorder::initializeInputSource(){
 
 #ifdef _WIN32
 
-    input_format = av_find_input_format("gdgrab");
+    input_format = av_find_input_format("gdigrab");
     if (input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
@@ -187,6 +187,7 @@ void ScreenRecorder::initializeInputSource(){
 void ScreenRecorder::initializeOutputSource() {
     /* Returns the output format in the list of registered output formats
     which best matches the provided parameters, or returns NULL if there is no match. */
+
     output_format = NULL;
     output_format = av_guess_format(NULL, vi.output_file.c_str(), NULL);
 
@@ -236,7 +237,7 @@ void ScreenRecorder::initializeOutputSource() {
         out_codec_context->max_b_frames = 2;
     */
 
-    av_opt_set(out_codec_context, "preset", "ultrafast", 0); // encoding speed to compression ratio
+    av_opt_set(out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
