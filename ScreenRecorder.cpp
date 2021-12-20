@@ -225,20 +225,26 @@ void ScreenRecorder::initializeOutputSource() {
     out_codec_context->codec_id = AV_CODEC_ID_H264; // AV_CODEC_ID_MPEG4
     out_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
     out_codec_context->pix_fmt  = AV_PIX_FMT_YUV420P;
-    out_codec_context->bit_rate = 400000; // 80000
+#ifdef _WIN32
+    out_codec_context->bit_rate = 4000000; // 80000
+#else
+    out_codec_context->bit_rate = 400000;
+#endif
     out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
     out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
     out_codec_context->gop_size = 3; //50
     out_codec_context->max_b_frames = 2;
     out_codec_context->time_base.num = 1;
-    out_codec_context->time_base.den = 30; //framerate
-    out_codec_context->max_b_frames = 2;
-    /*  out_codec_context->qmin = 5;
+    out_codec_context->time_base.den = vi.framerate; //framerate
+    /*out_codec_context->max_b_frames = 2;
+      out_codec_context->qmin = 5;
         out_codec_context->qmax = 10;
 
     */
 
     av_opt_set(out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
+    av_opt_set(out_codec_context, "tune", "stillimage", 0);
+    av_opt_set(out_codec_context, "crf", "10.0", 0);
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
