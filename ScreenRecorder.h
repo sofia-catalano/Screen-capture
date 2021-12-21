@@ -63,9 +63,9 @@ class ScreenRecorder {
     VideoInfo vi;
     AVFormatContext *format_context, *out_format_context;
 
-  
 
-#ifdef _WIN32
+
+#if defined( __APPLE__) || defined (_WIN32)
     const AVInputFormat *input_format;
     const AVOutputFormat *output_format;
     const AVCodec *av_encodec, *av_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;

@@ -29,11 +29,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
 }
 
 ScreenRecorder::~ScreenRecorder(){
-
-    cout<<"ciao2"<<endl;
-
     t_reading->join();
-    cout<<"ciao3"<<endl;
     t_converting->join();
 
 
@@ -84,12 +80,12 @@ void ScreenRecorder::initializeInputSource(){
 
 
 #elif __APPLE__
+    input_format = av_find_input_format("avfoundation");
+    if (input_format == NULL) {
+        throw logic_error{"av_find_input_format not found..."};
+    }
+
 #endif
-
-
-
-
-
 
 
     //AVDictionary to inform avformat_open_input and avformat_find_stream_info about all settings
