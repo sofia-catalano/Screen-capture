@@ -11,16 +11,7 @@ using namespace std;
 
 ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
     try{
-        initializeInputSource();
-        cout << "End initializeInputSource" << endl;
-
-        initializeOutputSource();
-        cout << "End initializeOutputSource" << endl;
-
-        initializeCaptureResources();
-        cout << "End initializeCaptureResources" << endl;
-
-        cout << "All required functions are registered successfully" << endl;
+        initializeVideoResources();
 
     }catch(exception &err){
         cout << "All required functions are registered not successfully" << endl;
@@ -29,8 +20,8 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
 }
 
 ScreenRecorder::~ScreenRecorder(){
-    t_reading->join();
-    t_converting->join();
+    t_reading_video->join();
+    t_converting_video->join();
 
 
     av_write_trailer(out_format_context);
@@ -38,7 +29,7 @@ ScreenRecorder::~ScreenRecorder(){
     av_packet_free(&outPacket);
     //av_freep(video_buffer);
     cout<<"ciao"<<endl;
-    avformat_close_input(&format_context);
+    avformat_close_input(&in_format_context);
     avio_close(out_format_context->pb);
     avcodec_free_context(&codec_context);
     avcodec_free_context(&out_codec_context);
@@ -46,8 +37,21 @@ ScreenRecorder::~ScreenRecorder(){
     cout << "Distruttore Screen Recorder" << endl;
 }
 
+void ScreenRecorder::initializeVideoResources() {
+    initializeVideoInput();
+    cout << "End initializeInputSource" << endl;
 
-void ScreenRecorder::initializeInputSource(){
+    initializeVideoOutput();
+    cout << "End initializeOutputSource" << endl;
+
+    initializeVideoCapture();
+    cout << "End initializeCaptureResources" << endl;
+
+    cout << "All required functions are registered successfully" << endl;
+}
+
+
+void ScreenRecorder::initializeVideoInput(){
     //initialize the library: registers all available file formats and codecs with the library
     // so they will be used automatically when a file with the corresponding format/codec is opened.
     //need to be call once
@@ -58,8 +62,8 @@ void ScreenRecorder::initializeInputSource(){
     string desktop_str;
 
     //allocate memory to the component AVFormatContext that will hold information about the format
-    format_context = NULL;
-    format_context = avformat_alloc_context();
+    in_format_context = NULL;
+    in_format_context = avformat_alloc_context();
 
 
 #ifdef _WIN32
@@ -105,7 +109,7 @@ void ScreenRecorder::initializeInputSource(){
 
     desktop_str = "desktop";
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&format_context, desktop_str.c_str(), input_format, &options) != 0){
+    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 
@@ -130,14 +134,14 @@ void ScreenRecorder::initializeInputSource(){
     // avformat_find_stream_info populates the format_context->streams with proper information
     // format_context->nb_streams will hold the size of the array streams (number of streams)
     // format_context->streams[i] will give us the i stream (an AVStream)
-    if (avformat_find_stream_info(format_context, &options) < 0) {
+    if (avformat_find_stream_info(in_format_context, &options) < 0) {
         throw logic_error{"Error in finding stream information"};
     }
 
     video_index = -1;
     // loop through all the streams until we find the video stream position/index
-    for (int i = 0; i < format_context->nb_streams; i++){
-        if( format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
+    for (int i = 0; i < in_format_context->nb_streams; i++){
+        if( in_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
             video_index = i;
 	        break;
 	    }
@@ -148,7 +152,7 @@ void ScreenRecorder::initializeInputSource(){
     }
 
     // Get the properties of a codec used by the stream video found
-    codec_parameters = format_context->streams[video_index]->codecpar;
+    codec_parameters = in_format_context->streams[video_index]->codecpar;
 
     //with the parameters, look up the proper codec (with the function avcodec_find_decoder)
     //it will find the registered decoder for the codec id and return an AVCodec
@@ -180,7 +184,7 @@ void ScreenRecorder::initializeInputSource(){
 }
 
 
-void ScreenRecorder::initializeOutputSource() {
+void ScreenRecorder::initializeVideoOutput() {
     /* Returns the output format in the list of registered output formats
     which best matches the provided parameters, or returns NULL if there is no match. */
 
@@ -232,7 +236,7 @@ void ScreenRecorder::initializeOutputSource() {
     out_codec_context->max_b_frames = 2;
     out_codec_context->time_base.num = 1;
     out_codec_context->time_base.den = vi.framerate; //framerate
-    /*out_codec_context->max_b_frames = 2;
+    /*
       out_codec_context->qmin = 5;
         out_codec_context->qmax = 10;
 
@@ -240,7 +244,7 @@ void ScreenRecorder::initializeOutputSource() {
 
     av_opt_set(out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
     av_opt_set(out_codec_context, "tune", "stillimage", 0);
-    av_opt_set(out_codec_context, "crf", "10.0", 0);
+    av_opt_set(out_codec_context, "crf", "18.0", 0);
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
@@ -293,7 +297,7 @@ void ScreenRecorder::initializeOutputSource() {
     /**/
 }
 
-void ScreenRecorder::initializeCaptureResources(){
+void ScreenRecorder::initializeVideoCapture(){
     //We allocate memory for AVPacket and AVFrame
     //in order to read the packets from the stream and decode them into frames
     inFrame = av_frame_alloc(); //Allocate an AVFrame and set its fields to default values
@@ -352,9 +356,9 @@ void ScreenRecorder::initializeCaptureResources(){
 
 void ScreenRecorder::recording(){
     end_reading = false;
-    t_reading = make_unique<thread>([this]() { this->read_packets(); });
+    t_reading_video = make_unique<thread>([this]() { this->read_packets(); });
     cout<<"ookk"<<endl;
-    t_converting = make_unique<thread>([this]() { this->convert_video_format(); });
+    t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
 }
 
 void ScreenRecorder::read_packets(){
@@ -385,19 +389,19 @@ void ScreenRecorder::read_packets(){
 
                  pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
-         if(av_read_frame(format_context, inPacket) < 0){
+         if(av_read_frame(in_format_context, inPacket) < 0){
              throw logic_error{"Error in getting inPacket"};
          }
-         inPacket_mutex.lock();
-         inPacket_queue.push(inPacket);
-         inPacket_mutex.unlock();
+         inPacket_video_mutex.lock();
+         inPacket_video_queue.push(inPacket);
+         inPacket_video_mutex.unlock();
 
 
      }
 
-    inPacket_mutex.lock();
+    inPacket_video_mutex.lock();
     end_reading = true;
-    inPacket_mutex.unlock();
+    inPacket_video_mutex.unlock();
 
     /*
      av_packet_unref(inPacket);
@@ -416,16 +420,16 @@ void ScreenRecorder::convert_video_format() {
         throw logic_error{"Error in allocate memory to AVPacket"};
     }*/
 
-    while(!end_reading || !inPacket_queue.empty()){
+    while(!end_reading || !inPacket_video_queue.empty()){
 
-        inPacket_mutex.lock();
-        if(!inPacket_queue.empty()) {
+        inPacket_video_mutex.lock();
+        if(!inPacket_video_queue.empty()) {
             j++;
             cout<<"decoding : "<<j<<endl;
 
-            inPacket2 = inPacket_queue.front();
-            inPacket_queue.pop();
-            inPacket_mutex.unlock();
+            inPacket2 = inPacket_video_queue.front();
+            inPacket_video_queue.pop();
+            inPacket_video_mutex.unlock();
             if (inPacket2->stream_index == video_index) {
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
@@ -501,7 +505,7 @@ void ScreenRecorder::convert_video_format() {
             }
             i++;
         }else{
-            inPacket_mutex.unlock();
+            inPacket_video_mutex.unlock();
         }
     }
 
@@ -509,8 +513,8 @@ void ScreenRecorder::convert_video_format() {
 
 
 
-//inPacket -> inFrame ->  (from RGB to YUV12) -> outFrame -> outPacket
-//rawpkt-> outFrame -> YUVFrame -> pkt
+
+
 
 
 

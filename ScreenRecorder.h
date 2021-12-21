@@ -59,9 +59,11 @@ class ScreenRecorder {
 
 
     private:
-    //video variables
-    VideoInfo vi;
-    AVFormatContext *format_context, *out_format_context;
+
+
+    //VIDEO VARIABLES
+    VideoInfo vi;//struct which contains all the video info to be grabbed
+    AVFormatContext *in_format_context, *out_format_context;
 
 
 
@@ -87,20 +89,29 @@ class ScreenRecorder {
     //while inPacket2 is needed for the function which decode and encode, to extract the packet from the queue
     AVFrame *inFrame, *outFrame;
     SwsContext *sws_ctx;
-    queue<AVPacket *> inPacket_queue;
-    mutex inPacket_mutex;
+    queue<AVPacket *> inPacket_video_queue;
+    mutex inPacket_video_mutex;
     bool end_reading;
 
-    unique_ptr<thread> t_reading;
-    unique_ptr<thread> t_converting;
+    unique_ptr<thread> t_reading_video;
+    unique_ptr<thread> t_converting_video;
 
-    //functions
-    void initializeInputSource();
-    void initializeOutputSource();
-    void initializeCaptureResources();
+
+
+    //AUDIO VARIABLES
+
+    //-----video  functions
+    void initializeVideoResources();//Invoke all the required methods (below) in order to initialize all the video resources
+    void initializeVideoInput();
+    void initializeVideoOutput();
+    void initializeVideoCapture();
+
+    //implementation video grabbing and converting
     void read_packets();
     void convert_video_format();
-    int nextPTS();
+
+
+    //-----audio  functions
 
 };
 
