@@ -19,40 +19,39 @@ find_package(Threads REQUIRED)
 #set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 
-
-find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
+find_path(AVCODEC_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavcodec/avcodec.h)
 find_library(AVCODEC_LIBRARY avcodec)
 
-find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h)
+find_path(AVFORMAT_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavformat/avformat.h)
 find_library(AVFORMAT_LIBRARY avformat)
 
-find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h)
+find_path(AVUTIL_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavutil/avutil.h)
 find_library(AVUTIL_LIBRARY avutil)
 
-find_path(AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h)
+find_path(AVDEVICE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavdevice/avdevice.h)
 find_library(AVDEVICE_LIBRARY avdevice)
 
 
 
-find_path(AVFORMAT_INCLUDE_DIR libavformat/avio.h)
+find_path(AVFORMAT_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavformat/avio.h)
 find_library(AVFORMAT_LIBRARY avformat)
 
-find_path(AVUTIL_INCLUDE_DIR libavutil/audio_fifo.h)
+find_path(AVUTIL_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavutil/audio_fifo.h)
 find_library(AVUTIL_LIBRARY avutil)
 
-find_path(AVUTIL_INCLUDE_DIR libavutil/imgutils.h)
+find_path(AVUTIL_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavutil/imgutils.h)
 find_library(AVUTIL_LIBRARY avutil)
 
-find_path(AVUTIL_INCLUDE_DIR libavutil/opt.h)
+find_path(AVUTIL_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavutil/opt.h)
 find_library(AVUTIL_LIBRARY avutil)
 
-find_path(AVUTIL_INCLUDE_DIR libavutil/audio_fifo.h)
+find_path(AVUTIL_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libavutil/audio_fifo.h)
 find_library(AVUTIL_LIBRARY avutil)
 
-find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h)
+find_path(SWRESAMPLE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswresample/swresample.h)
 find_library(SWRESAMPLE_LIBRARY swresample)
 
-find_path(SWSCALE_INCLUDE_DIR libswscale/swscale.h)
+find_path(SWSCALE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswscale/swscale.h)
 find_library(SWSCALE_LIBRARY swscale)
 
 

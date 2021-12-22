@@ -66,30 +66,15 @@ void ScreenRecorder::initializeVideoInput(){
     in_format_context = avformat_alloc_context();
 
 
-#ifdef _WIN32
-
-    input_format = av_find_input_format("gdigrab");
-    if (input_format == NULL) {
-        throw logic_error{"av_find_input_format not found..."};
-    }
-
-
-#elif __linux__
-
-    input_format = av_find_input_format("x11grab");
-    if (input_format == NULL) {
-        throw logic_error{"av_find_input_format not found..."};
-    }
 
 
 
-#elif __APPLE__
+
+
     input_format = av_find_input_format("avfoundation");
     if (input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
-
-#endif
 
 
     //AVDictionary to inform avformat_open_input and avformat_find_stream_info about all settings
@@ -199,7 +184,7 @@ void ScreenRecorder::initializeVideoOutput() {
     }
 
     //allocate memory to the component AVFormatContext that will contain information about the output format
-    avformat_alloc_output_context2(&out_format_context, output_format, output_format->name, vi.output_file.c_str());
+    avformat_alloc_output_context2( &out_format_context, output_format, output_format->name, vi.output_file.c_str());
 
     av_encodec = avcodec_find_encoder(AV_CODEC_ID_H264); //Abdullah: AV_CODEC_ID_MPEG4
     if (!av_encodec) {
