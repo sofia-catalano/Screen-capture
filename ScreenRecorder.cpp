@@ -46,8 +46,6 @@ void ScreenRecorder::initializeVideoResources() {
 
     initializeVideoCapture();
     cout << "End initializeCaptureResources" << endl;
-
-    cout << "All required functions are registered successfully" << endl;
 }
 
 
@@ -65,17 +63,26 @@ void ScreenRecorder::initializeVideoInput(){
     in_format_context = NULL;
     in_format_context = avformat_alloc_context();
 
-
-
-
-
-
-
-    input_format = av_find_input_format("avfoundation");
+#ifdef _WIN32
+    input_format = av_find_input_format("gdigrab");
     if (input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
 
+#elif __linux__
+    input_format = av_find_input_format("x11grab");
+    if (input_format == NULL) {
+        throw logic_error{"av_find_input_format not found..."};
+    }
+
+
+
+#elif __APPLE__
+    input_format = av_find_input_format("avfoundation");
+    if (input_format == NULL) {
+        throw logic_error{"av_find_input_format not found..."};
+    }
+#endif
 
     //AVDictionary to inform avformat_open_input and avformat_find_stream_info about all settings
     //options is a reference to an AVDictionary object that will be populated by av_dict_set
@@ -89,9 +96,7 @@ void ScreenRecorder::initializeVideoInput(){
         throw logic_error{"Error in setting dictionary value"};
     }
 
-
 #ifdef _WIN32
-
     desktop_str = "desktop";
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
     if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
@@ -99,7 +104,6 @@ void ScreenRecorder::initializeVideoInput(){
     }
 
 #elif __linux__
-
     // TODO risolvere il fullscreen
     //https://unix.stackexchange.com/questions/573121/get-current-screen-dimensions-via-xlib-using-c
     //https://www.py4u.net/discuss/81858
@@ -107,13 +111,17 @@ void ScreenRecorder::initializeVideoInput(){
     desktop_str=":0.0+"+ to_string(vi.offset_x)+","+ to_string(vi.offset_y);
 
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&format_context, desktop_str.c_str(), input_format, &options) != 0){
+    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 
 #elif __APPLE__
+    //video:audio
+    desktop_str="1:none";
+    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
+        throw logic_error{"Error in opening input stream"};
+    }
 #endif
-
 
     //avformat_open_input: only looks at the header, so next we need to check out the stream information in the file
     // avformat_find_stream_info populates the format_context->streams with proper information
