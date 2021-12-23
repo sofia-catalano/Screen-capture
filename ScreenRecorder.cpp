@@ -9,10 +9,17 @@
 using namespace std;
 
 
-ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
+ScreenRecorder::ScreenRecorder(VideoInfo vi, bool audio) : vi(vi), audio(audio){
     try{
+        initializeOutputContext();
+
         initializeVideoResources();
 
+        if(audio){
+            initializeAudioResources();
+        }
+
+        initializeOutputMedia();
     }catch(exception &err){
         cout << "All required functions are registered not successfully" << endl;
         cout << (err.what()) << endl;
@@ -28,24 +35,47 @@ ScreenRecorder::~ScreenRecorder(){
 
     av_packet_free(&outPacket);
     //av_freep(video_buffer);
-    cout<<"ciao"<<endl;
-    avformat_close_input(&in_format_context);
+    avformat_close_input(&video_format_context);
     avio_close(out_format_context->pb);
-    avcodec_free_context(&codec_context);
-    avcodec_free_context(&out_codec_context);
+    avcodec_free_context(&video_in_codec_context);
+    avcodec_free_context(&video_out_codec_context);
 
     cout << "Distruttore Screen Recorder" << endl;
 }
 
+void ScreenRecorder::initializeOutputContext(){
+    /* Returns the output format in the list of registered output formats
+which best matches the provided parameters, or returns NULL if there is no match. */
+
+    output_format = NULL;
+    output_format = av_guess_format(NULL, vi.output_file.c_str(), NULL);
+
+    if (output_format == NULL) {
+        throw runtime_error{"Error in matching the video format"};
+    }
+
+    //allocate memory to the component AVFormatContext that will contain information about the output format
+    avformat_alloc_output_context2( &out_format_context, output_format, output_format->name, vi.output_file.c_str());
+
+}
+
 void ScreenRecorder::initializeVideoResources() {
     initializeVideoInput();
-    cout << "End initializeInputSource" << endl;
+    cout << "End initializeVideoInput" << endl;
 
     initializeVideoOutput();
-    cout << "End initializeOutputSource" << endl;
+    cout << "End initializeVideoOutput" << endl;
 
     initializeVideoCapture();
-    cout << "End initializeCaptureResources" << endl;
+    cout << "End initializeVideoCapture" << endl;
+}
+
+void ScreenRecorder::initializeAudioResources(){
+    initializeAudioInput();
+    cout << "End initializeAudioInput" << endl;
+
+    initializeAudioOutput();
+    cout << "End initializeAudioOutput" << endl;
 }
 
 
@@ -56,50 +86,51 @@ void ScreenRecorder::initializeVideoInput(){
     avdevice_register_all();
 
 
-    options = NULL ;
+    video_options = NULL ;
     string desktop_str;
 
     //allocate memory to the component AVFormatContext that will hold information about the format
-    in_format_context = NULL;
-    in_format_context = avformat_alloc_context();
+    video_format_context = NULL;
+    video_format_context = avformat_alloc_context();
 
 #ifdef _WIN32
-    input_format = av_find_input_format("gdigrab");
-    if (input_format == NULL) {
+    video_input_format = av_find_input_format("gdigrab");
+    if (video_input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
 
 #elif __linux__
-    input_format = av_find_input_format("x11grab");
-    if (input_format == NULL) {
+    video_input_format = av_find_input_format("x11grab");
+    if (video_input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
 
 
 
 #elif __APPLE__
-    input_format = av_find_input_format("avfoundation");
-    if (input_format == NULL) {
+    video_input_format = av_find_input_format("avfoundation");
+    if (video_input_format == NULL) {
         throw logic_error{"av_find_input_format not found..."};
     }
 #endif
 
     //AVDictionary to inform avformat_open_input and avformat_find_stream_info about all settings
-    //options is a reference to an AVDictionary object that will be populated by av_dict_set
-    if(av_dict_set(&options, "framerate", to_string(vi.framerate).c_str(), 0) < 0){
+    //video_options is a reference to an AVDictionary object that will be populated by av_dict_set
+    if(av_dict_set(&video_options, "framerate", to_string(vi.framerate).c_str(), 0) < 0){
         throw logic_error{"Error in setting dictionary value"};
     }
-    if( av_dict_set(&options, "video_size", (to_string(vi.width) + "*" + to_string(vi.height)).c_str(), 0) < 0){
+    if( av_dict_set(&video_options, "video_size", (to_string(vi.width) + "*" + to_string(vi.height)).c_str(), 0) < 0){
         throw logic_error{"Error in setting dictionary value"};
     }
-    if( av_dict_set(&options, "probesize", "30M", 0) <0){  //forse serve al demuxer
+    if( av_dict_set(&video_options, "probesize", "30M", 0) <0){  //forse serve al demuxer
         throw logic_error{"Error in setting dictionary value"};
     }
+
 
 #ifdef _WIN32
     desktop_str = "desktop";
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
+    if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 
@@ -111,14 +142,18 @@ void ScreenRecorder::initializeVideoInput(){
     desktop_str=":0.0+"+ to_string(vi.offset_x)+","+ to_string(vi.offset_y);
 
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
+    if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 
 #elif __APPLE__
+    //TODO provare se funziona per video su mac
+    if( av_dict_set(&video_options, "pixel_format", "uyvy422", 0)){
+        throw logic_error{"Error in setting dictionary value"};
+    }
     //video:audio
     desktop_str="1:none";
-    if(avformat_open_input(&in_format_context, desktop_str.c_str(), input_format, &options) != 0){
+    if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 #endif
@@ -127,14 +162,14 @@ void ScreenRecorder::initializeVideoInput(){
     // avformat_find_stream_info populates the format_context->streams with proper information
     // format_context->nb_streams will hold the size of the array streams (number of streams)
     // format_context->streams[i] will give us the i stream (an AVStream)
-    if (avformat_find_stream_info(in_format_context, &options) < 0) {
+    if (avformat_find_stream_info(video_format_context, &video_options) < 0) {
         throw logic_error{"Error in finding stream information"};
     }
 
     video_index = -1;
     // loop through all the streams until we find the video stream position/index
-    for (int i = 0; i < in_format_context->nb_streams; i++){
-        if( in_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
+    for (int i = 0; i < video_format_context->nb_streams; i++){
+        if( video_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
             video_index = i;
 	        break;
 	    }
@@ -145,13 +180,13 @@ void ScreenRecorder::initializeVideoInput(){
     }
 
     // Get the properties of a codec used by the stream video found
-    codec_parameters = in_format_context->streams[video_index]->codecpar;
+    video_codec_parameters = video_format_context->streams[video_index]->codecpar;
 
     //with the parameters, look up the proper codec (with the function avcodec_find_decoder)
     //it will find the registered decoder for the codec id and return an AVCodec
     //AVCodec is the component that knows how to enCode and DECode the stream
-    av_decodec = avcodec_find_decoder(codec_parameters->codec_id);
-    if(av_decodec == NULL){
+    video_decodec = avcodec_find_decoder(video_codec_parameters->codec_id);
+    if(video_decodec == NULL){
         throw logic_error{"Error in finding the decoder"};
     }
 
@@ -159,95 +194,76 @@ void ScreenRecorder::initializeVideoInput(){
     //allocate memory for the AVCodecContext that will hold the context for the decode/encode process
     /* This AVCodecContext contains all the information about the codec that the stream is using,
     and now we have a pointer to it*/
-    codec_context = avcodec_alloc_context3(NULL); //TODO oppure av_decodec
+    video_in_codec_context = avcodec_alloc_context3(NULL); //TODO oppure video_decodec
 
 
-    //now fill this codec_context with CODEC parameters
-     avcodec_parameters_to_context(codec_context, codec_parameters);
+    //now fill this video_in_codec_context with CODEC parameters
+     avcodec_parameters_to_context(video_in_codec_context, video_codec_parameters);
 
     //open the codec
     //Initialize the AVCodecContext to use the given AVCodec
     //now the codec can be used
-    if (avcodec_open2(codec_context, av_decodec, NULL) < 0) {
+    if (avcodec_open2(video_in_codec_context, video_decodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
-
-
-
 }
 
 
 void ScreenRecorder::initializeVideoOutput() {
-    /* Returns the output format in the list of registered output formats
-    which best matches the provided parameters, or returns NULL if there is no match. */
-
-    output_format = NULL;
-    output_format = av_guess_format(NULL, vi.output_file.c_str(), NULL);
-
-
-
-    //TODO capire null e nullptr
-    if (output_format == NULL) {
-        throw runtime_error{"Error in matching the video format"};
-    }
-
-    //allocate memory to the component AVFormatContext that will contain information about the output format
-    avformat_alloc_output_context2( &out_format_context, output_format, output_format->name, vi.output_file.c_str());
-
-    av_encodec = avcodec_find_encoder(AV_CODEC_ID_H264); //Abdullah: AV_CODEC_ID_MPEG4
-    if (!av_encodec) {
-        throw logic_error{"Error in allocating av format output context"}; // TODO non mi pare l'errore giusto
+    video_encodec = avcodec_find_encoder(AV_CODEC_ID_H264); //Abdullah: AV_CODEC_ID_MPEG4
+    if (!video_encodec) {
+        throw logic_error{"Error in finding encoder"};
     }
 
     //we need to create new out stream into the output format context
-    video_st = avformat_new_stream(out_format_context, av_encodec); // TODO cheina av_encodec
+    video_st = avformat_new_stream(out_format_context, video_encodec);
     if( !video_st ){
         throw runtime_error{"Error creating a av format new stream"};
     }
 
-    out_codec_context = avcodec_alloc_context3(av_encodec); // TODO oppure av_encodec
-    if( !out_codec_context){
+    video_out_codec_context = avcodec_alloc_context3(video_encodec);
+    if( !video_out_codec_context){
         throw runtime_error{"Error in allocating the codec contexts"};
     }
 
     //avcodec_parameters_to_context: fill the output codec context with CODEC parameters
-    avcodec_parameters_to_context(out_codec_context, video_st->codecpar);
+    avcodec_parameters_to_context(video_out_codec_context, video_st->codecpar);
 
 
     // set property of the video file
-    out_codec_context->codec_id = AV_CODEC_ID_H264; // AV_CODEC_ID_MPEG4
-    out_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
-    out_codec_context->pix_fmt  = AV_PIX_FMT_YUV420P;
+    video_out_codec_context->codec_id = AV_CODEC_ID_H264; // AV_CODEC_ID_MPEG4
+    video_out_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
+    video_out_codec_context->pix_fmt  = AV_PIX_FMT_YUV420P;
 #ifdef _WIN32
-    out_codec_context->bit_rate = 4000000; // 80000
+    video_out_codec_context->bit_rate = 4000000; // 80000
 #else
-    out_codec_context->bit_rate = 400000;
+    video_out_codec_context->bit_rate = 400000;
 #endif
-    out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
-    out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
-    out_codec_context->gop_size = 3; //50
-    out_codec_context->max_b_frames = 2;
-    out_codec_context->time_base.num = 1;
-    out_codec_context->time_base.den = vi.framerate; //framerate
+    video_out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
+    video_out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
+    video_out_codec_context->gop_size = 3; //50
+    video_out_codec_context->max_b_frames = 2;
+    video_out_codec_context->time_base.num = 1;
+    video_out_codec_context->time_base.den = vi.framerate; //framerate
     /*
       out_codec_context->qmin = 5;
         out_codec_context->qmax = 10;
 
     */
 
-    av_opt_set(out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
-    av_opt_set(out_codec_context, "tune", "stillimage", 0);
-    av_opt_set(out_codec_context, "crf", "18.0", 0);
+    av_opt_set(video_out_codec_context, "preset", "slow", 0); // encoding speed to compression ratio
+    av_opt_set(video_out_codec_context, "tune", "stillimage", 0);
+    av_opt_set(video_out_codec_context, "crf", "18.0", 0);
 
     /* Some container formats like MP4 require global headers to be present.
 	   Mark the encoder so that it behaves accordingly. */
     if ( out_format_context->oformat->flags & AVFMT_GLOBALHEADER){
-        out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+        video_out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
     //open the codec (or better init the encoder)
     //Initialize the AVCodecContext to use the given AVCodec.
-    if (avcodec_open2(out_codec_context, av_encodec, NULL) < 0) {
+    if (avcodec_open2(video_out_codec_context, video_encodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
 
@@ -268,26 +284,7 @@ void ScreenRecorder::initializeVideoOutput() {
         throw logic_error{"Error in finding a stream for the output file"};
     }
 
-    avcodec_parameters_from_context(out_format_context->streams[out_video_index]->codecpar, out_codec_context);
-
-
-    /* create empty video file */
-    if ( !(out_format_context->flags & AVFMT_NOFILE) ){
-        if( avio_open2(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE,NULL,NULL) < 0 ){
-            throw logic_error{"Error creating the context for accessing the resource indicated by url"};
-        }
-    }
-
-
-
-
-    /* imp: mp4 container or some advanced container file required header information*/
-    if(avformat_write_header(out_format_context , &options) < 0){
-        throw logic_error{"Error in writing the header context"};
-
-    }
-
-    /**/
+    avcodec_parameters_from_context(out_format_context->streams[out_video_index]->codecpar, video_out_codec_context); // TODO aggiungere if < 0 error
 }
 
 void ScreenRecorder::initializeVideoCapture(){
@@ -308,7 +305,7 @@ void ScreenRecorder::initializeVideoCapture(){
     }
 
     //Allocate an image with size w and h and pixel format pix_fmt, and fill pointers and linesizes accordingly.
-    if(av_image_alloc(outFrame->data, outFrame->linesize, out_codec_context->width, out_codec_context->height, out_codec_context->pix_fmt, 32 ) < 0){
+    if(av_image_alloc(outFrame->data, outFrame->linesize, video_out_codec_context->width, video_out_codec_context->height, video_out_codec_context->pix_fmt, 32 ) < 0){
         throw logic_error{"Error in filling image array"};
     };
     /*
@@ -333,16 +330,16 @@ void ScreenRecorder::initializeVideoCapture(){
     //which is going to want our source width and height, our desired width and height,
     // the source format and desired format, along with some other options and flags.
     // initialize SWS context for software scaling
-    sws_ctx = sws_getContext(codec_context->width,
-                             codec_context->height,
-                             codec_context->pix_fmt,
-                             out_codec_context->width,
-                             out_codec_context->height,
-                             out_codec_context->pix_fmt, //the native format of the frame
+    sws_ctx = sws_getContext(video_in_codec_context->width,
+                             video_in_codec_context->height,
+                             video_in_codec_context->pix_fmt,
+                             video_out_codec_context->width,
+                             video_out_codec_context->height,
+                             video_out_codec_context->pix_fmt, //the native format of the frame
                              SWS_BICUBIC, NULL, NULL, NULL); //Color conversion and scaling. possibilities: SWS_FAST_BILINEAR, SWS_BILINEAR, SWS_BICUBIC
 
-    outFrame->width=codec_context->width;
-    outFrame->height=codec_context->height;
+    outFrame->width=video_in_codec_context->width;
+    outFrame->height=video_in_codec_context->height;
     outFrame->format = AV_PIX_FMT_YUV420P;
 }
 
@@ -352,6 +349,9 @@ void ScreenRecorder::recording(){
     t_reading_video = make_unique<thread>([this]() { this->read_packets(); });
     cout<<"ookk"<<endl;
     t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
+    if (audio){
+        t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
+    }
 }
 
 void ScreenRecorder::read_packets(){
@@ -382,14 +382,12 @@ void ScreenRecorder::read_packets(){
 
                  pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
-         if(av_read_frame(in_format_context, inPacket) < 0){
+         if(av_read_frame(video_format_context, inPacket) < 0){
              throw logic_error{"Error in getting inPacket"};
          }
          inPacket_video_mutex.lock();
          inPacket_video_queue.push(inPacket);
          inPacket_video_mutex.unlock();
-
-
      }
 
     inPacket_video_mutex.lock();
@@ -426,7 +424,7 @@ void ScreenRecorder::convert_video_format() {
             if (inPacket2->stream_index == video_index) {
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
-                value = avcodec_send_packet(codec_context, inPacket2);
+                value = avcodec_send_packet(video_in_codec_context, inPacket2);
                 if (value < 0) {
                     throw runtime_error("Error in decoding video (send_packet)");
                 }
@@ -434,23 +432,23 @@ void ScreenRecorder::convert_video_format() {
 
                 //-------------------------------------------------
                 //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame
-                if(avcodec_receive_frame(codec_context, inFrame) == 0){ // frame successfully decoded
+                if(avcodec_receive_frame(video_in_codec_context, inFrame) == 0){ // frame successfully decoded
                     //Fine decode
 
                     // Convert the image from its native format to YUV
                     sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
-                              codec_context->height, outFrame->data, outFrame->linesize);
+                              video_in_codec_context->height, outFrame->data, outFrame->linesize);
 
                     outFrame->pts = (int64_t)i * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;;
 
 
 
                     //encode video frame
-                    value = avcodec_send_frame(out_codec_context, outFrame);
+                    value = avcodec_send_frame(video_out_codec_context, outFrame);
 
                     //avcodec_receive_packet fa internamente l'av_packet_unref dell'outPacket prima di copiarci dentro il contenuto
                     //del nuovo pacchetto ricevuto dall'encoder : quindi resetta il contenuto e libera i buffer interni
-                    got_picture = avcodec_receive_packet(out_codec_context, outPacket);
+                    got_picture = avcodec_receive_packet(video_out_codec_context, outPacket);
                     if(value == 0 ){
                         if(got_picture == 0){
                             //if got_picture is 0, we have enough packets to have a frame
@@ -505,7 +503,209 @@ void ScreenRecorder::convert_video_format() {
 }
 
 
+void ScreenRecorder::initializeAudioInput(){
+    audio_options = NULL;
+    audio_format_context = NULL;
+    audio_format_context = avformat_alloc_context();
+    string audio_str;
 
+#ifdef _WIN32
+    audio_input_format = av_find_input_format("dshow");
+    if (audio_input_format == NULL) {
+        throw logic_error{"Error in finding this audio input device"};
+    }
+
+#elif __linux__
+    audio_input_format = av_find_input_format("alsa");
+    if (audio_input_format == NULL){
+        throw logic_error{"Error in opening ALSA driver"};
+    }
+
+#elif __APPLE__
+    audio_input_format = av_find_input_format("avfoundation");
+    if (audio_input_format == NULL){
+        throw logic_error{"Error in opening AVFoundation driver"};
+    }
+#endif
+
+    // TODO CAPIRE SE SERVONO le options
+    if( av_dict_set(&audio_options, "sample_rate", "44100", 0)){
+        throw logic_error{"Error in setting dictionary value"};
+    }
+    if( av_dict_set(&audio_options, "async", "25", 0) ){
+        throw logic_error{"Error in setting dictionary value"};
+    }
+
+#ifdef _WIN32
+    //TYPE=NAME where TYPE can be either audio or video, and NAME is the device’s name
+    audio_str = "audio=Microphone (Realtek High Definition Audio)";
+    if(avformat_open_input(&audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) != 0){
+        throw logic_error{"Error in opening input stream"};
+    }
+
+#elif __linux__
+ //TODO get audio string
+    if (avformat_open_input(&audio_format_context, audio_str.c_str(), audio_format_context, &audio_options) < 0){
+        throw runtime_error("Error in opening input stream");
+    }
+
+#elif __APPLE__
+    //[[VIDEO]:[AUDIO]]
+    // none do not record the corresponding media type
+    audio_str = "none:1"; // TODO oppure 0
+    if (avformat_open_input(&audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) < 0){
+        throw logic_error("Error in opening input stream");
+    }
+#endif
+
+    if (avformat_find_stream_info(audio_format_context, &audio_options) < 0) {
+        throw logic_error{"Error in finding stream information"};
+    }
+
+    audio_index = -1;
+    for (int i = 0; i < audio_format_context->nb_streams; i++){
+        if( audio_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ){
+            audio_index = i;
+            break;
+        }
+    }
+
+    if (audio_index == -1) {
+        throw logic_error{"Error in finding a video stream"};
+    }
+
+    // Get the properties of a codec used by the stream audio found
+    audio_codec_parameters = audio_format_context->streams[audio_index]->codecpar;
+
+    audio_decodec = avcodec_find_decoder(audio_codec_parameters->codec_id);
+    if(audio_decodec == NULL){
+        throw logic_error{"Error in finding the decoder"};
+    }
+
+    //allocate memory for the AVCodecContext that will hold the context for the decode/encode process
+    /* This AVCodecContext contains all the information about the codec that the stream is using,
+    and now we have a pointer to it*/
+    audio_in_codec_context = avcodec_alloc_context3(audio_decodec); //TODO oppure NULL
+
+
+    //now fill this video_in_codec_context with CODEC parameters
+    avcodec_parameters_to_context(audio_in_codec_context, audio_codec_parameters); //TODO aggiungere if < 0 error
+
+    //open the codec
+    //Initialize the AVCodecContext to use the given AVCodec
+    //now the codec can be use
+    if (avcodec_open2(audio_in_codec_context, audio_decodec, NULL) < 0) {
+        throw logic_error{"Error in opening the av codec"};
+    }
+}
+
+void ScreenRecorder::initializeAudioOutput(){
+    audio_encodec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    if (!audio_encodec) {
+        throw logic_error{"Error in finding encoder"};
+    }
+
+    //we need to create new out stream into the output format context
+    audio_st = avformat_new_stream(out_format_context, audio_encodec);
+    if( !audio_st ){
+        throw runtime_error{"Error creating a av format new stream"};
+    }
+
+    audio_out_codec_context = avcodec_alloc_context3(audio_encodec);
+    if( !audio_out_codec_context){
+        throw runtime_error{"Error in allocating the codec contexts"};
+    }
+
+    //avcodec_parameters_to_context: fill the output codec context with CODEC parameters
+    avcodec_parameters_to_context(audio_out_codec_context, audio_st->codecpar);
+
+
+    // set property of the audio file
+    audio_out_codec_context->codec_id = AV_CODEC_ID_AAC;
+    audio_out_codec_context->channel_layout = av_get_default_channel_layout(audio_out_codec_context->channels);
+    audio_out_codec_context->channels = av_get_channel_layout_nb_channels(audio_out_codec_context->channel_layout);
+    audio_out_codec_context->sample_rate = 0;
+    audio_out_codec_context->bit_rate = 64000;  //TODO 128000
+    audio_out_codec_context->time_base.num = 1;
+    audio_out_codec_context->time_base.den = audio_out_codec_context->sample_rate;
+    audio_out_codec_context->sample_fmt = audio_encodec->sample_fmts[0]; //TODO ???
+
+
+    //TODO copiato dal cinese
+    const enum AVSampleFormat* p = audio_encodec->sample_fmts;
+    int ret = 0;
+    while (*p != AV_SAMPLE_FMT_NONE) {
+        if (*p == audio_in_codec_context->sample_fmt) {
+            ret = 1;
+            break;
+        }
+        p++;
+    }
+    if (ret <= 0) {
+        throw logic_error("error in...");
+    }
+
+
+    //TODO copiato dal cinese
+    if (!audio_encodec->supported_samplerates)
+        audio_out_codec_context->sample_rate = 44100;
+    else {
+        const int* p = audio_encodec->supported_samplerates;
+        while (*p) {
+            if (!audio_out_codec_context->sample_rate || abs(44100 - *p) < abs(44100 - audio_out_codec_context->sample_rate))
+                audio_out_codec_context->sample_rate = *p;
+            p++;
+        }
+    }
+
+
+    /* Some container formats like MP4 require global headers to be present.
+	   Mark the encoder so that it behaves accordingly. */
+    if ( out_format_context->oformat->flags & AVFMT_GLOBALHEADER){
+        audio_out_codec_context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    //open the codec (or better init the encoder)
+    //Initialize the AVCodecContext to use the given AVCodec.
+    if (avcodec_open2(audio_out_codec_context, audio_encodec, NULL) < 0) {
+        throw logic_error{"Error in opening the av codec"};
+    }
+
+
+
+    if(!out_format_context->nb_streams){
+        throw logic_error{"Error output file does not contain any stream"};
+    }
+    out_audio_index = -1;
+    for (int i = 0; i < out_format_context->nb_streams; i++) {
+        if (out_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_UNKNOWN) {
+            out_audio_index = i;
+        }
+    }
+
+    if(out_audio_index==-1){
+        throw logic_error{"Error in finding a stream for the output file"};
+    }
+
+    avcodec_parameters_from_context(out_format_context->streams[out_audio_index]->codecpar, audio_out_codec_context); // TODO aggiungere if < 0 error
+}
+
+
+
+void ScreenRecorder::initializeOutputMedia(){
+    /* create empty video file */
+    if ( !(out_format_context->flags & AVFMT_NOFILE) ){
+        if( avio_open2(&out_format_context->pb , vi.output_file.c_str() , AVIO_FLAG_WRITE,NULL,NULL) < 0 ){
+            throw logic_error{"Error creating the context for accessing the resource indicated by url"};
+        }
+    }
+
+    /* imp: mp4 container or some advanced container file required header information*/
+    if(avformat_write_header(out_format_context , &video_options) < 0){
+        throw logic_error{"Error in writing the header context"};
+
+    }
+}
 
 
 

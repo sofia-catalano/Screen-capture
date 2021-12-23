@@ -15,6 +15,8 @@ find_package(Threads REQUIRED)
 #set(CMAKE_USE_PTHREADS_INIT 1)
 #set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
+add_compile_options(--std=c++20)
 IF(UNIX)
     find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
     find_library(AVCODEC_LIBRARY avcodec)
@@ -84,7 +86,6 @@ IF(APPLE)
     find_path(SWSCALE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswscale/swscale.h)
     find_library(SWSCALE_LIBRARY swscale)
 ENDIF(APPLE)
-add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
 
 target_include_directories(Screen-capture PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})

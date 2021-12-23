@@ -9,8 +9,9 @@ int main(int argc, char const* argv[]) {
     vi.offset_x = atoi(argv[3]);
     vi.offset_y = atoi(argv[4]);
     vi.framerate = atoi(argv[5]);
+    bool audio = atoi(argv[6]);
     vi.output_file = "./output.mp4"; //TODO: sostituire con un argomento passato, serve per av_guess_format
-    ScreenRecorder screen_recorder{vi};
+    ScreenRecorder screen_recorder{vi, audio};
     cout << "Fine costruttore" << endl;
     screen_recorder.recording();
     cout << "Costruito oggetto Screen Recorder" << endl;
