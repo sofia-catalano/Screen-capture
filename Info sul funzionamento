@@ -3,6 +3,7 @@ LINK UTILI :
 - https://github.com/FFmpeg/FFmpeg/tree/master/doc/examples contiene esempi di utlizzo di ffmpeg per vari obiettivi
 - http://dranger.com/ffmpeg/ una sorta di tutorial
 - https://github.com/phamquy/FFmpeg-tutorial-samples
+- https://docs.wxwidgets.org/trunk/plat_gtk_install.html
 
 NOTA:
 - https://github.com/Akagi201/ffmpeg-player/blob/master/simple-update/main.c altro esempio di cattura schermo interessante

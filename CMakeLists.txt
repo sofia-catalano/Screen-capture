@@ -1,5 +1,16 @@
-cmake_minimum_required(VERSION 3.17.5)
+cmake_minimum_required(VERSION 3.16)
 project(Screen-capture)
+
+aux_source_directory(. SRC_LIST)
+
+set(wxWidgets_CONFIGURATION mswu)
+find_package(wxWidgets COMPONENTS core base REQUIRED)
+include(${wxWidgets_USE_FILE})
+
+
+
+
+
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
@@ -84,9 +95,12 @@ IF(APPLE)
     find_path(SWSCALE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswscale/swscale.h)
     find_library(SWSCALE_LIBRARY swscale)
 ENDIF(APPLE)
-add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
+add_executable(${PROJECT_NAME} ${SRC_LIST} main.cpp ScreenRecorder.cpp ScreenRecorder.h ScreenCaptureInterface.h ScreenCaptureInterface.cpp main.h)
 
-target_include_directories(Screen-capture PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
+target_include_directories(${PROJECT_NAME} PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
-target_link_libraries(Screen-capture PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
-        ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
+        ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY} ${wxWidgets_LIBRARIES} )
+
+#add_executable(${PROJECT_NAME} ${SRC_LIST} ScreenCaptureInterface.cpp ScreenCaptureInterface.h main.h)
+#target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})

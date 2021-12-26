@@ -343,7 +343,7 @@ void ScreenRecorder::initializeVideoCapture(){
 
     outFrame->width=codec_context->width;
     outFrame->height=codec_context->height;
-    outFrame->format = AV_PIX_FMT_YUV420P;
+    outFrame->format = AV_PIX_FMT_UYVY422;
 }
 
 
