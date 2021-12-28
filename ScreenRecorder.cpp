@@ -6,7 +6,13 @@
 #include <exception>
 #include <iostream>
 
+#include <condition_variable>
+
 using namespace std;
+
+bool pauseThread=false;
+std::condition_variable cv;
+std::mutex m;
 
 
 ScreenRecorder::ScreenRecorder(VideoInfo vi) : vi(vi){
@@ -175,7 +181,6 @@ void ScreenRecorder::initializeVideoInput(){
 
 
 }
-
 
 void ScreenRecorder::initializeVideoOutput() {
     /* Returns the output format in the list of registered output formats
@@ -354,14 +359,26 @@ void ScreenRecorder::recording(){
     t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
 }
 
+
+
 void ScreenRecorder::read_packets(){
     int nFrame = 400;
     int i = 0;
 
      while (true){
+         while(pauseThread){
+             std::unique_lock<std::mutex> lk(m);
+             if(!pauseThread)
+                 break;
+             cv.wait(lk);
+             lk.unlock();
+         }
+
          cout<<i<<endl;
 
          if(i++ == nFrame){
+             //resettare playPause
+             *vi.status = 0;
              break;
          }
          //We allocate memory for AVPacket in order to read the packets from the stream
@@ -402,6 +419,18 @@ void ScreenRecorder::read_packets(){
      */
 }
 
+void ScreenRecorder::pause(){
+    //pause
+    std::lock_guard<std::mutex> lk(m);
+    pauseThread=true;
+}
+
+void ScreenRecorder::resume(){
+    std::lock_guard<std::mutex> lk(m);
+    pauseThread=false;
+    cv.notify_one();
+}
+
 void ScreenRecorder::convert_video_format() {
     int j = 0, i=0;
     int value = 0;
@@ -416,6 +445,15 @@ void ScreenRecorder::convert_video_format() {
     while(!end_reading || !inPacket_video_queue.empty()){
 
         inPacket_video_mutex.lock();
+
+        while(pauseThread){
+            std::unique_lock<std::mutex> lk(m);
+            if(!pauseThread)
+                break;
+            cv.wait(lk);
+            lk.unlock();
+        }
+
         if(!inPacket_video_queue.empty()) {
             j++;
             cout<<"decoding : "<<j<<endl;
@@ -481,6 +519,7 @@ void ScreenRecorder::convert_video_format() {
                             if(av_write_frame(out_format_context , outPacket) != 0){
                                 throw runtime_error("Error in writing video frame");
                             }
+
                             //TODO qui ci va invece l'unlock
                         }
                     }else{

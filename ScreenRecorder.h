@@ -40,6 +40,7 @@ typedef struct
     int offset_x;
     int offset_y;
     int screen_number;
+    int *status;
     bool fullscreen; //copiato da vedere
     string output_file;
 
@@ -55,6 +56,9 @@ class ScreenRecorder {
     ScreenRecorder(VideoInfo vi);
 	~ScreenRecorder();
     void recording();
+
+    void pause();
+    void resume();
 
     private:
 
