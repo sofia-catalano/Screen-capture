@@ -70,7 +70,7 @@ public:
     // ctor
 
     wxBitmapToggleButton *m_playPauseb;
-    wxBitmapToggleButton *m_stopb;
+    wxBitmapButton *m_stopb;
     wxBitmapToggleButton *m_micb;
 
 

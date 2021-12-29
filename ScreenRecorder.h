@@ -59,6 +59,7 @@ class ScreenRecorder {
 
     void pause();
     void resume();
+    void stop();
 
     private:
 

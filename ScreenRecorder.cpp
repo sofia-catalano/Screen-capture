@@ -54,7 +54,6 @@ void ScreenRecorder::initializeVideoResources() {
     cout << "End initializeCaptureResources" << endl;
 }
 
-
 void ScreenRecorder::initializeVideoInput(){
     //initialize the library: registers all available file formats and codecs with the library
     // so they will be used automatically when a file with the corresponding format/codec is opened.
@@ -177,9 +176,6 @@ void ScreenRecorder::initializeVideoInput(){
     if (avcodec_open2(codec_context, av_decodec, NULL) < 0) {
         throw logic_error{"Error in opening the av codec"};
     }
-
-
-
 }
 
 void ScreenRecorder::initializeVideoOutput() {
@@ -256,8 +252,6 @@ void ScreenRecorder::initializeVideoOutput() {
         throw logic_error{"Error in opening the av codec"};
     }
 
-
-
     if(!out_format_context->nb_streams){
         throw logic_error{"Error output file does not contain any stream"};
     }
@@ -282,9 +276,6 @@ void ScreenRecorder::initializeVideoOutput() {
             throw logic_error{"Error creating the context for accessing the resource indicated by url"};
         }
     }
-
-
-
 
     /* imp: mp4 container or some advanced container file required header information*/
     if(avformat_write_header(out_format_context , &options) < 0){
@@ -351,15 +342,12 @@ void ScreenRecorder::initializeVideoCapture(){
     outFrame->format = AV_PIX_FMT_UYVY422;
 }
 
-
 void ScreenRecorder::recording(){
     end_reading = false;
     t_reading_video = make_unique<thread>([this]() { this->read_packets(); });
     cout<<"ookk"<<endl;
     t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
 }
-
-
 
 void ScreenRecorder::read_packets(){
     int nFrame = 400;
@@ -376,8 +364,7 @@ void ScreenRecorder::read_packets(){
 
          cout<<i<<endl;
 
-         if(i++ == nFrame){
-             //resettare playPause
+         if(i++ == nFrame || *vi.status == -1){
              *vi.status = 0;
              break;
          }
@@ -419,18 +406,6 @@ void ScreenRecorder::read_packets(){
      */
 }
 
-void ScreenRecorder::pause(){
-    //pause
-    std::lock_guard<std::mutex> lk(m);
-    pauseThread=true;
-}
-
-void ScreenRecorder::resume(){
-    std::lock_guard<std::mutex> lk(m);
-    pauseThread=false;
-    cv.notify_one();
-}
-
 void ScreenRecorder::convert_video_format() {
     int j = 0, i=0;
     int value = 0;
@@ -446,6 +421,8 @@ void ScreenRecorder::convert_video_format() {
 
         inPacket_video_mutex.lock();
 
+        //da valutare se mettere in pause anche qui
+        /*
         while(pauseThread){
             std::unique_lock<std::mutex> lk(m);
             if(!pauseThread)
@@ -453,6 +430,7 @@ void ScreenRecorder::convert_video_format() {
             cv.wait(lk);
             lk.unlock();
         }
+         */
 
         if(!inPacket_video_queue.empty()) {
             j++;
@@ -543,6 +521,26 @@ void ScreenRecorder::convert_video_format() {
 
 }
 
+//-----------------------------------------------------
+//  API to manage threads
+//-----------------------------------------------------
+
+void ScreenRecorder::pause(){
+    //pause
+    std::lock_guard<std::mutex> lk(m);
+    pauseThread=true;
+}
+
+void ScreenRecorder::resume(){
+    std::lock_guard<std::mutex> lk(m);
+    pauseThread=false;
+    cv.notify_one();
+}
+
+void ScreenRecorder::stop(){
+    resume();
+    *vi.status = -1;
+}
 
 
 

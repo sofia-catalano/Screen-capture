@@ -18,7 +18,6 @@ bool MyApp::OnInit()
     if ( !wxApp::OnInit() )
         return false;
 
-
     new MyFrame("ScreenCapture");
 
     return true;
@@ -36,12 +35,14 @@ MyFrame::MyFrame(const wxString& title)
     wxBoxSizer  *sizer      = new wxBoxSizer(wxHORIZONTAL);
 
     m_playPauseb  = new wxBitmapToggleButton(this, ID_PLAY_PAUSE, wxBitmap("../icons/playpause.png", wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
-    m_stopb       = new wxBitmapToggleButton(this, ID_STOP,       wxBitmap("../icons/stop.png",      wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
+    m_stopb       = new wxBitmapButton(      this, ID_STOP,       wxBitmap("../icons/stop.png",      wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
     m_micb        = new wxBitmapToggleButton(this, ID_MIC,        wxBitmap("../icons/mic.png",       wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
+
+    m_stopb->Enable(false);
 
     Connect(ID_PLAY_PAUSE, wxEVT_TOGGLEBUTTON,
             wxCommandEventHandler(MyFrame::OnPlayPause) );
-    Connect(ID_STOP, wxEVT_TOGGLEBUTTON,
+    Connect(ID_STOP, wxEVT_BUTTON,
             wxCommandEventHandler(MyFrame::OnStop) );
     Connect(ID_MIC, wxEVT_TOGGLEBUTTON,
             wxCommandEventHandler(MyFrame::OnMic) );
@@ -83,7 +84,6 @@ MyFrame::~MyFrame()
     wxGetApp().m_semAllDone.Wait();
 }
 
-
 MyThread *MyFrame::CreateThread()
 {
     MyThread *thread = new MyThread;
@@ -98,7 +98,6 @@ MyThread *MyFrame::CreateThread()
 
     return thread;
 }
-
 
 // ----------------------------------------------------------------------------
 // MyFrame - event handlers
@@ -115,15 +114,15 @@ void MyFrame::OnPlayPause(wxCommandEvent& WXUNUSED(event) )
         {
             wxLogError(wxT("Can't start thread!"));
         }
+        m_stopb->Enable(true);
+        m_micb->Enable(false);
     }
     else if(playpause == 1){
         sc->pause();
-        //cout<<"Pause recording..."<<endl;
         playpause = 2;
     }
     else if(playpause == 2){
         sc->resume();
-        //cout<<"Resume recording..."<<endl;
         playpause = 1;
     }
 
@@ -134,7 +133,14 @@ void MyFrame::OnPlayPause(wxCommandEvent& WXUNUSED(event) )
 
 void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
 {
-    //API stop recording thread
+    sc->stop();
+
+    m_playPauseb->SetValue(false);
+    m_stopb->Enable(false);
+
+    m_micb->SetValue(false);
+    m_micb->Enable(true);
+
     cout<<"Stop recording"<<endl;
 }
 
@@ -183,16 +189,13 @@ wxThread::ExitCode MyThread::Entry()
     vi.offset_x = 0;
     vi.offset_y = 0;
     vi.framerate = 30;
-    vi.status  = &playpause;
+    vi.status  = &playpause; //for restore m_playb on stop()
     cout<<"0x"<<&playpause<<endl;
     vi.output_file = "./prova.mp4";
     ScreenRecorder screen_recorder{vi};
 
     sc = &screen_recorder;
     sc->recording();
-
-    //playpause = 0;
-
 
     //wxLogMessage("Thread finished.");
 
