@@ -7,22 +7,6 @@ ScreenRecorder *sc;
 // Create a new application object
 IMPLEMENT_APP(MyApp)
 
-MyApp::MyApp()
-{
-    m_shuttingDown = false;
-}
-
-// `Main program' equivalent, creating windows and returning main app frame
-bool MyApp::OnInit()
-{
-    if ( !wxApp::OnInit() )
-        return false;
-
-    new MyFrame("ScreenCapture");
-
-    return true;
-}
-
 // ----------------------------------------------------------------------------
 // MyFrame
 // ----------------------------------------------------------------------------
@@ -157,7 +141,7 @@ void MyFrame::OnMic(wxCommandEvent& WXUNUSED(event) )
 MyThread::MyThread()
         : wxThread()
 {
-    m_count = 0;
+    //m_count = 0;
 }
 
 MyThread::~MyThread()
@@ -184,11 +168,13 @@ wxThread::ExitCode MyThread::Entry()
     //wxLogMessage("Thread started (priority = %u).", GetPriority());
 
     VideoInfo vi;
+    //prendere valori da GUI altrimenti default
     vi.width = 800;
     vi.height = 800;
     vi.offset_x = 0;
     vi.offset_y = 0;
-    vi.framerate = 30;
+    vi.framerate = 20;
+
     vi.status  = &playpause; //for restore m_playb on stop()
     cout<<"0x"<<&playpause<<endl;
     vi.output_file = "./prova.mp4";

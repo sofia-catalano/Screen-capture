@@ -350,10 +350,10 @@ void ScreenRecorder::recording(){
 }
 
 void ScreenRecorder::read_packets(){
-    int nFrame = 400;
+    //int nFrame = 1500;
     int i = 0;
 
-     while (true){
+    while (true){
          while(pauseThread){
              std::unique_lock<std::mutex> lk(m);
              if(!pauseThread)
@@ -362,9 +362,10 @@ void ScreenRecorder::read_packets(){
              lk.unlock();
          }
 
+         i++;
          cout<<i<<endl;
 
-         if(i++ == nFrame || *vi.status == -1){
+         if(/*i++ == nFrame ||*/ *vi.status == -1){
              *vi.status = 0;
              break;
          }

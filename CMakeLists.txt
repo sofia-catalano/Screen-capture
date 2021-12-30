@@ -95,7 +95,7 @@ IF(APPLE)
     find_path(SWSCALE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswscale/swscale.h)
     find_library(SWSCALE_LIBRARY swscale)
 ENDIF(APPLE)
-add_executable(${PROJECT_NAME} ${SRC_LIST} ScreenRecorder.cpp ScreenRecorder.h ScreenCaptureInterface.h ScreenCaptureInterface.cpp)
+add_executable(${PROJECT_NAME} ${SRC_LIST} ScreenRecorder.cpp ScreenRecorder.h ScreenCaptureInterface.h ScreenCaptureInterface.cpp main.cpp main.h)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
