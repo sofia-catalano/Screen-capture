@@ -147,10 +147,6 @@ void ScreenRecorder::initializeVideoInput(){
     }
 
 #elif __APPLE__
-    //TODO provare se funziona per video su mac
-    if( av_dict_set(&video_options, "pixel_format", "uyvy422", 0)){
-        throw logic_error{"Error in setting dictionary value"};
-    }
     //video:audio
     desktop_str="1:none";
     if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
@@ -350,7 +346,7 @@ void ScreenRecorder::recording(){
     cout<<"ookk"<<endl;
     t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
     if (audio){
-        t_converting_video = make_unique<thread>([this]() { this->convert_video_format(); });
+        t_converting_audio = make_unique<thread>([this]() { this->convert_audio_format(); });
     }
 }
 
@@ -382,12 +378,11 @@ void ScreenRecorder::read_packets(){
 
                  pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
-         if(av_read_frame(video_format_context, inPacket) < 0){
-             throw logic_error{"Error in getting inPacket"};
+         if(av_read_frame(video_format_context, inPacket) > 0){
+             inPacket_video_mutex.lock();
+             inPacket_video_queue.push(inPacket);
+             inPacket_video_mutex.unlock();
          }
-         inPacket_video_mutex.lock();
-         inPacket_video_queue.push(inPacket);
-         inPacket_video_mutex.unlock();
      }
 
     inPacket_video_mutex.lock();
@@ -401,7 +396,7 @@ void ScreenRecorder::read_packets(){
 }
 
 void ScreenRecorder::convert_video_format() {
-    int j = 0, i=0;
+    int j = 0, i = 0;
     int value = 0;
     int got_picture = 0;
 
@@ -545,21 +540,22 @@ void ScreenRecorder::initializeAudioInput(){
 
 #elif __linux__
  //TODO get audio string
-    if (avformat_open_input(&audio_format_context, audio_str.c_str(), audio_format_context, &audio_options) < 0){
+    audio_str = "hw:0";
+    if (avformat_open_input(&audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) < 0){
         throw runtime_error("Error in opening input stream");
     }
 
 #elif __APPLE__
     //[[VIDEO]:[AUDIO]]
     // none do not record the corresponding media type
-    audio_str = "none:1"; // TODO oppure 0
+    audio_str = "none:0"; // TODO oppure 1
     if (avformat_open_input(&audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) < 0){
         throw logic_error("Error in opening input stream");
     }
 #endif
 
     if (avformat_find_stream_info(audio_format_context, &audio_options) < 0) {
-        throw logic_error{"Error in finding stream information"};
+        throw logic_error{"Error in finding audio stream information"};
     }
 
     audio_index = -1;
@@ -571,7 +567,7 @@ void ScreenRecorder::initializeAudioInput(){
     }
 
     if (audio_index == -1) {
-        throw logic_error{"Error in finding a video stream"};
+        throw logic_error{"Error in finding an audio stream"};
     }
 
     // Get the properties of a codec used by the stream audio found
@@ -579,7 +575,7 @@ void ScreenRecorder::initializeAudioInput(){
 
     audio_decodec = avcodec_find_decoder(audio_codec_parameters->codec_id);
     if(audio_decodec == NULL){
-        throw logic_error{"Error in finding the decoder"};
+        throw logic_error{"Error in finding the audio decoder"};
     }
 
     //allocate memory for the AVCodecContext that will hold the context for the decode/encode process
@@ -628,7 +624,7 @@ void ScreenRecorder::initializeAudioOutput(){
     audio_out_codec_context->bit_rate = 64000;  //TODO 128000
     audio_out_codec_context->time_base.num = 1;
     audio_out_codec_context->time_base.den = audio_out_codec_context->sample_rate;
-    audio_out_codec_context->sample_fmt = audio_encodec->sample_fmts[0]; //TODO ???
+    audio_out_codec_context->sample_fmt = audio_encodec->sample_fmts ? audio_encodec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP; //TODO ???
 
 
     //TODO copiato dal cinese
@@ -707,7 +703,54 @@ void ScreenRecorder::initializeOutputMedia(){
     }
 }
 
+void ScreenRecorder::convert_audio_format() {
+    int ret;
+    AVPacket* inPacket, * outPacket;
+    AVFrame* inFrame, * outFrame;
+    uint8_t** resampledData;
+
+    // Create the FIFO buffer based on the specified output sample format
+    if (!(audio_buffer = av_audio_fifo_alloc(audio_out_codec_context->sample_fmt, audio_out_codec_context->channels, 1))) {
+        throw logic_error("Error in allocation fifo buffer");
+    }
+
+    //Allocate memory for AVPacket and AVFrame
+    // in order to read the packets from the stream and decode them into frames
+    inPacket = av_packet_alloc();
+    if( !inPacket ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }
+    inFrame = av_frame_alloc();
+    if( !inFrame ){
+        throw logic_error{"Error in allocate memory to AVFrame"};
+    }
+
+    outFrame = av_frame_alloc();
+    if( !outFrame ){
+        throw logic_error{"Error in allocate memory to AVFrame"};
+    }
+    outPacket = av_packet_alloc();
+    if( !outPacket ){
+        throw logic_error{"Error in allocate memory to AVPacket"};
+    }
 
 
-
-
+    //init the resampler
+    SwrContext *swrContext = nullptr;
+    swrContext = swr_alloc_set_opts(swrContext,
+                                    av_get_default_channel_layout(audio_out_codec_context->channels),
+                                    audio_out_codec_context->sample_fmt,
+                                    audio_out_codec_context->sample_rate,
+                                    av_get_default_channel_layout(audio_in_codec_context->channels),
+                                    audio_in_codec_context->sample_fmt,
+                                    audio_in_codec_context->sample_rate,
+                                    0,
+                                    nullptr);
+    if (!swrContext) {
+        throw logic_error("Error in allocating the resample context");
+    }
+    if ((swr_init(swrContext)) < 0) {
+        swr_free(&swrContext);
+        throw logic_error("Error in opening resample context");
+    }
+}

@@ -94,6 +94,7 @@ private:
 
     unique_ptr<thread> t_reading_video;
     unique_ptr<thread> t_converting_video;
+    unique_ptr<thread> t_converting_audio;
 
     //-----video  functions
     void initializeVideoResources();//Invoke all the required methods (below) in order to initialize all the video resources
@@ -115,11 +116,15 @@ private:
     AVCodecContext *audio_in_codec_context, *audio_out_codec_context;
     const AVCodec *audio_encodec, *audio_decodec;
     AVStream *audio_st;
+    AVAudioFifo *audio_buffer;
 
     //-----audio functions
     void initializeAudioResources();
     void initializeAudioInput();
     void initializeAudioOutput();
+
+    //implementation audio grabbing and converting
+    void convert_audio_format();
 
 /********* COMMON VARIABLE **********/
     AVFormatContext *out_format_context;
