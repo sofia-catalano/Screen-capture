@@ -142,7 +142,7 @@ void ScreenRecorder::initializeVideoInput(){
     desktop_str=":0.0+"+ to_string(vi.offset_x)+","+ to_string(vi.offset_y);
 
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
+    if(avformat_open_input(&video_in_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 

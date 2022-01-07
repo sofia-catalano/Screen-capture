@@ -160,11 +160,11 @@ result listdev_windows(IEnumMoniker *pEnum)
     }
     return r;
 }
-
+#endif
 result getAudioDevices(){
     result r;
 #ifdef __linux__
-        r=listdev_linux("pcm");
+    r=listdev_linux("pcm");
 #elif _WIN32
     HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     if (SUCCEEDED(hr))
@@ -184,4 +184,3 @@ result getAudioDevices(){
     return r;
 }
 
-#endif

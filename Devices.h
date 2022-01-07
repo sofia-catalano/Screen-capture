@@ -6,11 +6,6 @@
 #define SCREEN_CAPTURE_DEVICES_H
 
 
-class Devices {
-
-};
-
-
 
 #include <iostream>
 
