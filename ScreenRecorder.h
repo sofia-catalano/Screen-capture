@@ -14,20 +14,21 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include "Devices.h"
 
 using namespace std;
 
 extern "C"
 {
-#include "libavformat/avio.h"
-#include "libavutil/audio_fifo.h"
-#include "libavcodec/avcodec.h"
-#include "libavdevice/avdevice.h"
-#include "libavformat/avformat.h"
-#include "libavutil/imgutils.h"
-#include "libavutil/opt.h"
-#include "libswresample/swresample.h"
-#include "libswscale/swscale.h"
+    #include "libavformat/avio.h"
+    #include "libavutil/audio_fifo.h"
+    #include "libavcodec/avcodec.h"
+    #include "libavdevice/avdevice.h"
+    #include "libavformat/avformat.h"
+    #include "libavutil/imgutils.h"
+    #include "libavutil/opt.h"
+    #include "libswresample/swresample.h"
+    #include "libswscale/swscale.h"
 }
 
 typedef struct
@@ -51,32 +52,35 @@ enum class status{
 
 
 class ScreenRecorder {
-public:
-    ScreenRecorder(VideoInfo vi, bool audio);
-    ~ScreenRecorder();
+    public:
+    ScreenRecorder(VideoInfo vi,bool audio);
+	~ScreenRecorder();
+
     void recording();
 
-private:
 
-    /**********VIDEO VARIABLES***********/
+    private:
+
+    //COMMON VARIABLE FOR VIDEO AND AUDIO
+    AVFormatContext  *out_format_context;
+
+    //VIDEO VARIABLES
     VideoInfo vi;//struct which contains all the video info to be grabbed
-    AVFormatContext *video_format_context;
+    AVFormatContext *video_in_format_context;
 
 
-#ifdef __APPLE__
+
+#if defined( __APPLE__) || defined (_WIN32)
     const AVInputFormat *video_input_format;
+    const AVOutputFormat *output_format;
     const AVCodec *video_encodec, *video_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
-#endif
-#ifdef __linux__
-    AVInputFormat *video_input_format;
-    AVCodec *video_encodec, *video_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
-#endif
-#ifdef _WIN32
-    const AVInputFormat *video_input_format;
-    const AVCodec *video_encodec, *video_decodec;
+#else
+    AVInputFormat *input_format;
+    AVOutputFormat *output_format;
+    AVCodec *av_encodec, *av_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
 #endif
     AVDictionary *video_options;
-    int video_index, out_video_index;
+    int in_video_index, out_video_index;
 
     AVCodecContext *video_in_codec_context, *video_out_codec_context;
     AVCodecParameters *video_codec_parameters;
@@ -96,6 +100,16 @@ private:
     unique_ptr<thread> t_converting_video;
     unique_ptr<thread> t_converting_audio;
 
+
+
+    //AUDIO VARIABLES
+
+
+
+
+    void initializeOutputContext();
+    void initializeOutputMedia();
+
     //-----video  functions
     void initializeVideoResources();//Invoke all the required methods (below) in order to initialize all the video resources
     void initializeVideoInput();
@@ -105,6 +119,11 @@ private:
     //implementation video grabbing and converting
     void read_packets();
     void convert_video_format();
+
+    //-----audio  functions
+    void initializeAudioResources();
+    void initializeAudioInput();
+    void initializeAudioOutput();
 
 /********* AUDIO VARIABLE **********/
     bool audio;
@@ -118,25 +137,11 @@ private:
     AVStream *audio_st;
     AVAudioFifo *audio_buffer;
 
-    //-----audio functions
-    void initializeAudioResources();
-    void initializeAudioInput();
-    void initializeAudioOutput();
+    //-----audio  functions
 
     //implementation audio grabbing and converting
     void convert_audio_format();
 
-/********* COMMON VARIABLE **********/
-    AVFormatContext *out_format_context;
-    #if defined (__APPLE__) || defined (_WIN32)
-        const AVOutputFormat *output_format;
-    #elif __linux__
-        AVOutputFormat *output_format;
-    #endif
-
-    //-----common functions
-    void initializeOutputContext();
-    void initializeOutputMedia();
 };
 
 

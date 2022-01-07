@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.17.5)
 project(Screen-capture)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
+IF(UNIX)
+set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS  -lasound")
+ELSE()
+    set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
+ENDIF(UNIX)
 
 #threads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -15,7 +19,7 @@ find_package(Threads REQUIRED)
 #set(CMAKE_USE_PTHREADS_INIT 1)
 #set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h)
+add_executable(Screen-capture main.cpp ScreenRecorder.cpp ScreenRecorder.h Devices.cpp Devices.h)
 add_compile_options(--std=c++20)
 IF(UNIX)
     find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
@@ -50,6 +54,9 @@ IF(UNIX)
 
     find_path(SWSCALE_INCLUDE_DIR libswscale/swscale.h)
     find_library(SWSCALE_LIBRARY swscale)
+
+    find_path(ALSA_INCLUDE_DIR  alsa/asoundlib.h)
+    find_library(ALSA_LIBRARY asound)
 ENDIF(UNIX)
 
 IF(APPLE)
@@ -87,7 +94,9 @@ IF(APPLE)
     find_library(SWSCALE_LIBRARY swscale)
 ENDIF(APPLE)
 
+
+
 target_include_directories(Screen-capture PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
-        ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR})
+        ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR} ${ALSA_INCLUDE_DIR})
 target_link_libraries(Screen-capture PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
-        ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY})
+        ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY} ${ALSA_LIBRARY})

@@ -35,7 +35,7 @@ ScreenRecorder::~ScreenRecorder(){
 
     av_packet_free(&outPacket);
     //av_freep(video_buffer);
-    avformat_close_input(&video_format_context);
+    avformat_close_input(&video_in_format_context);
     avio_close(out_format_context->pb);
     avcodec_free_context(&video_in_codec_context);
     avcodec_free_context(&video_out_codec_context);
@@ -90,8 +90,8 @@ void ScreenRecorder::initializeVideoInput(){
     string desktop_str;
 
     //allocate memory to the component AVFormatContext that will hold information about the format
-    video_format_context = NULL;
-    video_format_context = avformat_alloc_context();
+    video_in_format_context = NULL;
+    video_in_format_context = avformat_alloc_context();
 
 #ifdef _WIN32
     video_input_format = av_find_input_format("gdigrab");
@@ -130,7 +130,7 @@ void ScreenRecorder::initializeVideoInput(){
 #ifdef _WIN32
     desktop_str = "desktop";
     // open the file, read its header and fill the format_context (AVFormatContext) with information about the format
-    if(avformat_open_input(&video_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
+    if(avformat_open_input(&video_in_format_context, desktop_str.c_str(), video_input_format, &video_options) != 0){
         throw logic_error{"Error in opening input stream"};
     }
 
@@ -158,25 +158,25 @@ void ScreenRecorder::initializeVideoInput(){
     // avformat_find_stream_info populates the format_context->streams with proper information
     // format_context->nb_streams will hold the size of the array streams (number of streams)
     // format_context->streams[i] will give us the i stream (an AVStream)
-    if (avformat_find_stream_info(video_format_context, &video_options) < 0) {
+    if (avformat_find_stream_info(video_in_format_context, &video_options) < 0) {
         throw logic_error{"Error in finding stream information"};
     }
 
-    video_index = -1;
+    in_video_index = -1;
     // loop through all the streams until we find the video stream position/index
-    for (int i = 0; i < video_format_context->nb_streams; i++){
-        if( video_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
-            video_index = i;
+    for (int i = 0; i < video_in_format_context->nb_streams; i++){
+        if( video_in_format_context->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ){
+            in_video_index = i;
 	        break;
 	    }
     }
 
-    if (video_index == -1) {
+    if (in_video_index == -1) {
         throw logic_error{"Error in finding a video stream"};
     }
 
     // Get the properties of a codec used by the stream video found
-    video_codec_parameters = video_format_context->streams[video_index]->codecpar;
+    video_codec_parameters = video_in_format_context->streams[in_video_index]->codecpar;
 
     //with the parameters, look up the proper codec (with the function avcodec_find_decoder)
     //it will find the registered decoder for the codec id and return an AVCodec
@@ -378,10 +378,12 @@ void ScreenRecorder::read_packets(){
 
                  pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
-         if(av_read_frame(video_format_context, inPacket) > 0){
+         if(av_read_frame(video_in_format_context, inPacket) >= 0){
+
              inPacket_video_mutex.lock();
              inPacket_video_queue.push(inPacket);
              inPacket_video_mutex.unlock();
+             cout<<"ciao"<<endl;
          }
      }
 
@@ -406,6 +408,7 @@ void ScreenRecorder::convert_video_format() {
         throw logic_error{"Error in allocate memory to AVPacket"};
     }*/
 
+
     while(!end_reading || !inPacket_video_queue.empty()){
 
         inPacket_video_mutex.lock();
@@ -416,7 +419,7 @@ void ScreenRecorder::convert_video_format() {
             inPacket2 = inPacket_video_queue.front();
             inPacket_video_queue.pop();
             inPacket_video_mutex.unlock();
-            if (inPacket2->stream_index == video_index) {
+            if (inPacket2->stream_index == in_video_index) {
                 //decode video frame
                 //let's send the raw data packet (compressed frame) to the decoder, through the codec context
                 value = avcodec_send_packet(video_in_codec_context, inPacket2);
