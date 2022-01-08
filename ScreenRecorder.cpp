@@ -171,6 +171,8 @@ void ScreenRecorder::initializeVideoInput(){
 	    }
     }
 
+
+
     if (in_video_index == -1) {
         throw logic_error{"Error in finding a video stream"};
     }
@@ -233,7 +235,7 @@ void ScreenRecorder::initializeVideoOutput() {
 #ifdef _WIN32
     video_out_codec_context->bit_rate = 4000000; // 80000
 #else
-    video_out_codec_context->bit_rate = 400000;
+    video_out_codec_context->bit_rate = 4000000;
 #endif
     video_out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
     video_out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
@@ -378,8 +380,8 @@ void ScreenRecorder::read_packets(){
 
                  pkt->pts, pkt->dts and pkt->duration are always set to correct values in AVStream.time_base units*/
          //Let's feed our packets from the streams with the function av_read_frame while it has packets
-         if(av_read_frame(video_in_format_context, inPacket) >= 0){
-
+         if(av_read_frame(video_in_format_context, inPacket) >= 0 && inPacket->stream_index==in_video_index){
+             av_packet_rescale_ts(inPacket,video_in_format_context->streams[in_video_index]->time_base,video_in_codec_context->time_base);
              inPacket_video_mutex.lock();
              inPacket_video_queue.push(inPacket);
              inPacket_video_mutex.unlock();
@@ -432,16 +434,22 @@ void ScreenRecorder::convert_video_format() {
                 //let's receive the raw data frame (uncompressed frame) from the decoder, through the same codec context, using the function avcodec_receive_frame
                 if(avcodec_receive_frame(video_in_codec_context, inFrame) == 0){ // frame successfully decoded
                     //Fine decode
+                    inFrame->pts=i++;
+
+                    if(out_format_context->streams[out_video_index]->start_time<=0){
+                        out_format_context->streams[out_video_index]->start_time=inFrame->pts;
+                    }
 
                     // Convert the image from its native format to YUV
                     sws_scale(sws_ctx, inFrame->data, inFrame->linesize, 0,
                               video_in_codec_context->height, outFrame->data, outFrame->linesize);
 
-                    outFrame->pts = (int64_t)i * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;;
+                    // outFrame->pts = i;
+                    outFrame->pts = inFrame->pts;;
 
 
 
-                    //encode video frame
+                            //encode video frame
                     value = avcodec_send_frame(video_out_codec_context, outFrame);
 
                     //avcodec_receive_packet fa internamente l'av_packet_unref dell'outPacket prima di copiarci dentro il contenuto
@@ -451,26 +459,17 @@ void ScreenRecorder::convert_video_format() {
                         if(got_picture == 0){
                             //if got_picture is 0, we have enough packets to have a frame
 
+                            av_packet_rescale_ts(outPacket,video_out_codec_context->time_base,out_format_context->streams[out_video_index]->time_base);
 
-
-                            if(outPacket->pts != AV_NOPTS_VALUE) {
+                            /*if(outPacket->pts != AV_NOPTS_VALUE) {
                                 outPacket->pts = (int64_t)i * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;
                                 cout<<" OUT_PACKET PTS :"<< outPacket->pts<<endl;
                             }
                             if(outPacket->dts != AV_NOPTS_VALUE) {
                                 outPacket->dts = (int64_t)i  * (int64_t)30 * (int64_t)30 * (int64_t)100 / (int64_t)vi.framerate;
                                 cout << " OUT_PACKET DTS :" << outPacket->pts << endl;
-                            }
+                            }*/
 
-                            /*outPacket->pts = av_rescale_q(outPacket->pts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
-                            outPacket->dts = av_rescale_q(outPacket->dts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
-                            */
-
-
-                            /*outPacket->pts = av_rescale_q_rnd(outPacket->pts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base,(AVRounding) (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
-                            outPacket->dts = av_rescale_q_rnd(outPacket->dts, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base, (AVRounding) (AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
-                            outPacket->duration = av_rescale_q(outPacket->duration, format_context->streams[video_index]->time_base, out_format_context->streams[out_video_index]->time_base);
-                            */
 
                             //TODO vedere se ci va un lock per la scrittura :
                             //TODO ci va per la sincronizzazione dei thread audio e video che scriveranno sullo stesso file di output
@@ -492,7 +491,7 @@ void ScreenRecorder::convert_video_format() {
 
                 cout << "inPacket: " << inPacket2 << endl;
             }
-            i++;
+            //i++;
         }else{
             inPacket_video_mutex.unlock();
         }

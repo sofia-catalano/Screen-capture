@@ -86,7 +86,8 @@ class ScreenRecorder {
     AVCodecParameters *video_codec_parameters;
 
 
-    AVStream *video_st;
+
+    AVStream *video_st,out_video_st;
 
     AVPacket *inPacket, *inPacket2, *outPacket;//inPacket is needed for the thread which read packets and push it into the queue
     //while inPacket2 is needed for the function which decode and encode, to extract the packet from the queue
