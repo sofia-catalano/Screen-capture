@@ -232,11 +232,9 @@ void ScreenRecorder::initializeVideoOutput() {
     video_out_codec_context->codec_id = AV_CODEC_ID_H264; // AV_CODEC_ID_MPEG4
     video_out_codec_context->codec_type = AVMEDIA_TYPE_VIDEO;
     video_out_codec_context->pix_fmt  = AV_PIX_FMT_YUV420P;
-#ifdef _WIN32
-    video_out_codec_context->bit_rate = 4000000; // 80000
-#else
+
     video_out_codec_context->bit_rate = 4000000;
-#endif
+
     video_out_codec_context->width = vi.width; // (int)(rrs.width * vs.quality) / 32 * 32;
     video_out_codec_context->height = vi.height; // (int)(rrs.height * vs.quality) / 2 * 2;
     video_out_codec_context->gop_size = 3; //50
