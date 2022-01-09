@@ -128,14 +128,14 @@ class ScreenRecorder {
 
 /********* AUDIO VARIABLE **********/
     bool audio;
-    AVFormatContext *audio_format_context;
+    AVFormatContext *in_audio_format_context;
     AVDictionary *audio_options;
 #if defined( __APPLE__) || defined (_WIN32)
     const AVInputFormat *audio_input_format;
 #else
     AVInputFormat *audio_input_format;
 #endif
-    int audio_index, out_audio_index;
+    int in_audio_index, out_audio_index;
     AVCodecParameters *audio_codec_parameters;
     AVCodecContext *audio_in_codec_context, *audio_out_codec_context;
     const AVCodec *audio_encodec, *audio_decodec;
