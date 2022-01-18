@@ -60,7 +60,7 @@ class ScreenRecorder {
 
 
     private:
-
+    bool stop=false;
     //COMMON VARIABLE FOR VIDEO AND AUDIO
     AVFormatContext  *out_format_context;
 
@@ -70,14 +70,19 @@ class ScreenRecorder {
 
 
 
-#if defined( __APPLE__) || defined (_WIN32)
+#if  defined (_WIN32)
     const AVInputFormat *video_input_format;
     const AVOutputFormat *output_format;
+    const AVCodec *video_encodec, *video_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
+#elif defined( APPLE)
+    const AVInputFormat *video_input_format;
+    AVOutputFormat *output_format;
     const AVCodec *video_encodec, *video_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
 #else
     AVInputFormat *video_input_format;
     AVOutputFormat *output_format;
     AVCodec *video_encodec, *video_decodec;//This registers all available file formats and codecs with the library so they will be used automatically when a file with the corresponding format/codec is opened.Vecodec;
+
 #endif
     AVDictionary *video_options;
     int in_video_index, out_video_index;
@@ -128,14 +133,14 @@ class ScreenRecorder {
 
 /********* AUDIO VARIABLE **********/
     bool audio;
-    AVFormatContext *audio_format_context;
+    AVFormatContext *in_audio_format_context;
     AVDictionary *audio_options;
-#if defined( __APPLE__) || defined (_WIN32)
+#if defined (_WIN32)
     const AVInputFormat *audio_input_format;
 #else
     AVInputFormat *audio_input_format;
 #endif
-    int audio_index, out_audio_index;
+    int in_audio_index, out_audio_index;
     AVCodecParameters *audio_codec_parameters;
     AVCodecContext *audio_in_codec_context, *audio_out_codec_context;
     const AVCodec *audio_encodec, *audio_decodec;
