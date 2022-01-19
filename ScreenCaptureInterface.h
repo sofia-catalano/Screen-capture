@@ -73,7 +73,9 @@ public:
     wxBitmapButton *m_stopb;
     wxBitmapToggleButton *m_micb;
 
-
+    wxComboBox *listAudioDevices;
+    wxTextCtrl *path;
+    wxTextCtrl *fps;
 
     MyFrame(const wxString& title);
     virtual ~MyFrame();
@@ -83,6 +85,9 @@ public:
     void OnPlayPause(wxCommandEvent& event);
     void OnStop(wxCommandEvent& event);
     void OnMic(wxCommandEvent& event);
+    void OnFullScreen(wxCommandEvent& event);
+
+    void OnSelectionAudio(wxCommandEvent& e);
     //TODO evento su chiusura finestra
 
     // helper function - creates a new thread (but doesn't run it)
@@ -93,6 +98,23 @@ public:
             m_nCount;
 };
 
+//-----------------------------------------------
+//  WINDOW TO GET AREA TO RECORD
+//-----------------------------------------------
+class MyFrame1 : public wxFrame{
+        public:
+        // ctor
+
+        wxButton *portion_screen;
+
+        MyFrame1(const wxString& title);
+        virtual ~MyFrame1();
+
+        // event handlers
+        // --------------
+        void onSubmit(wxCommandEvent& event);
+
+};
 // ----------------------------------------------------------------------------
 // constants
 // ----------------------------------------------------------------------------
@@ -123,3 +145,4 @@ public:
 const int ID_PLAY_PAUSE   = 1;
 const int ID_STOP         = 2;
 const int ID_MIC          = 3;
+const int ID_FULL_SCREEN  = 4;
