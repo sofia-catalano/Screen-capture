@@ -125,6 +125,7 @@ void ScreenRecorder::initializeVideoInput(){
     }
     if( av_dict_set(&video_options, "probesize", "30M", 0) <0){  //forse serve al demuxer
         throw logic_error{"Error in setting dictionary value"};
+
     }
 
 //TODO VEDERE SE FUNZIONA COSI SU MAC
