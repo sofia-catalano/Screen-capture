@@ -60,7 +60,7 @@ class ScreenRecorder {
 
 
     private:
-
+    boolean stop=false;
     //COMMON VARIABLE FOR VIDEO AND AUDIO
     AVFormatContext  *out_format_context;
 
@@ -95,6 +95,7 @@ class ScreenRecorder {
     SwsContext *sws_ctx;
     queue<AVPacket *> inPacket_video_queue;
     mutex inPacket_video_mutex;
+    mutex lockwrite;
     bool end_reading;
 
     unique_ptr<thread> t_reading_video;

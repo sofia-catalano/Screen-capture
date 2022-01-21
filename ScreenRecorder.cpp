@@ -127,6 +127,16 @@ void ScreenRecorder::initializeVideoInput(){
         throw logic_error{"Error in setting dictionary value"};
     }
 
+//TODO VEDERE SE FUNZIONA COSI SU MAC
+#ifdef MACOS
+    ret = av_dict_set(&video_options, "pixel_format", "0rgb", 0);
+        if(ret<0)
+            throw runtime_error("Error in setting dictionary value");
+
+        ret = av_dict_set(&video_options, "capture_cursor", "1", 0);
+        if(ret<0)
+            throw runtime_error("Error in setting dictionary value");
+#endif
 
 #ifdef _WIN32
     desktop_str = "desktop";
@@ -352,7 +362,7 @@ void ScreenRecorder::recording(){
 }
 
 void ScreenRecorder::read_packets(){
-    int nFrame = 150;
+    int nFrame = 5000;
     int i = 0;
 
      while (true){
@@ -472,9 +482,11 @@ void ScreenRecorder::convert_video_format() {
 
                             //TODO vedere se ci va un lock per la scrittura :
                             //TODO ci va per la sincronizzazione dei thread audio e video che scriveranno sullo stesso file di output
+                            lockwrite.lock();
                             if(av_write_frame(out_format_context , outPacket) != 0){
                                 throw runtime_error("Error in writing video frame");
                             }
+                            lockwrite.unlock();
                             //TODO qui ci va invece l'unlock
                         }
                     }else{
@@ -495,7 +507,7 @@ void ScreenRecorder::convert_video_format() {
             inPacket_video_mutex.unlock();
         }
     }
-
+    stop=true;
 }
 
 
@@ -725,6 +737,7 @@ void ScreenRecorder::convert_audio_format() {
     AVFrame* inFrame, * outFrame;
     uint8_t** resampledData;
     uint64_t frameCount=0;
+    int temp_pts;
 
     // Create the FIFO buffer based on the specified output sample format
     if (!(audio_buffer = av_audio_fifo_alloc(audio_out_codec_context->sample_fmt, audio_out_codec_context->channels, 1))) {
@@ -774,7 +787,7 @@ void ScreenRecorder::convert_audio_format() {
         throw logic_error("Error in opening resample context");
     }
 //-----------------------------------------------------
-    while( frameCount<=400){
+    while( !stop){
         ret = av_read_frame(in_audio_format_context,inPacket);
         if (ret < 0) {
             throw std::runtime_error("can not read frame");
@@ -822,12 +835,16 @@ void ScreenRecorder::convert_audio_format() {
             outputFrame->format = AV_SAMPLE_FMT_FLTP;
             outputFrame->sample_rate = audio_out_codec_context->sample_rate;
 
-            ret = av_frame_get_buffer(outputFrame, 0);
-            //assert(ret >= 0);
-            ret = av_audio_fifo_read(audio_buffer, (void**)outputFrame->data, audio_out_codec_context->frame_size);
-            //assert(ret >= 0);
 
-            outputFrame->pts = frameCount * audio_st->time_base.den * 1024 / audio_out_codec_context->sample_rate;
+            if(av_frame_get_buffer(outputFrame, 0)<0)
+                throw logic_error("Error in getting audio buffer");
+            if(av_audio_fifo_read(audio_buffer, (void**)outputFrame->data, audio_out_codec_context->frame_size)<0)
+                throw runtime_error("[RUNTIME_ERROR] cannot get audio buffer");
+
+            outputFrame->pts = frameCount;
+            temp_pts = outputFrame->pts;
+            frameCount = frameCount + outputFrame->nb_samples;
+
 
             ret = avcodec_send_frame(audio_out_codec_context, outputFrame);
             if (ret < 0) {
@@ -845,12 +862,14 @@ void ScreenRecorder::convert_audio_format() {
 
             outPacket->stream_index = audio_st->index;
             outPacket->duration = audio_st->time_base.den * 1024 / audio_out_codec_context->sample_rate;
-            outPacket->dts = outPacket->pts =frameCount * audio_st->time_base.den * 1024 / audio_out_codec_context->sample_rate;
+            outPacket->dts = outPacket->pts =temp_pts;//frameCount * audio_st->time_base.den * 1024 / audio_out_codec_context->sample_rate;
 
-            frameCount++;
-
-            av_write_frame(out_format_context, outPacket);
-            av_packet_unref(outPacket);
+            //frameCount++;
+            lockwrite.lock();
+            av_interleaved_write_frame(out_format_context, outPacket);
+            lockwrite.unlock();
+            cout<<"Pacchetto : "<<frameCount<<endl;
+            //av_packet_unref(outPacket);
 
         }
 
