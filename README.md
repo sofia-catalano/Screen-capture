@@ -7,8 +7,8 @@
 
 ## Our Project
 Screen-capture is a system based on two components:
-* The Screen-capture library, a multiplatform C++ library capable of capturing the entire screen, or a portion of it, and storing it in mp4 format, with or without audio recorded by the microphone.
-* The wxWidgets application, a C++ frontend based on wxWidgets libraries, used to show the proper behavior of the Screen-capture library, and to allow the user to record/pause/resume/stop a video stream.
+* The **Screen-capture library**, a multiplatform C++ library capable of capturing the entire screen, or a portion of it, and storing it in mp4 format, with or without audio recorded by the microphone.
+* The **wxWidgets application**, a C++ frontend based on wxWidgets libraries, used to show the proper behavior of the Screen-capture library, and to allow the user to record/pause/resume/stop a video stream.
 
 
 ### Screen-capture library
@@ -51,3 +51,16 @@ The functions implemented in the Screen-capture library are:
 * **pause()**: allows to pause the recording process
 * **stop_recording()** allows to stop the recording process
  
+### wxWidgets application
+Allow to use the Screen-Capture library, offering a GUI to give commands.
+In particular it allows the user to
+* define the area to be recorded
+* select whether the audio should be captured or not
+* activate and stop the recording process
+* pause and subsequently resume it
+* define the file that will contain the final recording
+
+It uses the function **getAudioDevices()** (in Devices.cpp) to get the available input audio devices on Windows and Linux.  
+
+#### Screenshot
+[interface screen]**(aggiungere l'url)**
