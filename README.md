@@ -62,5 +62,5 @@ In particular it allows the user to
 
 It uses the function **getAudioDevices()** (in Devices.cpp) to get the available input audio devices on Windows and Linux.  
 
-#### Screenshot
+#### Screenshot
 [interface screen]**(aggiungere l'url)**
