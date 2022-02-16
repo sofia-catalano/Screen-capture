@@ -124,3 +124,9 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
    * make install
 
 ### MacOS
+#### wxWidgets application
+
+#### Screen-recorder library
+1. Execute these commands from the terminal:
+   * brew install ffmpeg
+   * brew update && brew upgrade ffmpeg
