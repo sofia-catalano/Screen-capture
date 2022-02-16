@@ -64,3 +64,63 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
 
 #### Screenshot
 [interface screen]**(aggiungere l'url)**
+
+
+## How to run compile and run
+
+### Linux
+#### wxWidgets application
+1. Execute these commands from the terminal: 
+   * sudo apt install libgtk-3-dev
+   * git clone --recurse-submodules https://github.com/wxWidgets/wxWidgets.git
+   * cd wxWidgets
+   * mkdir buildgtk
+   * cd buildgtk
+   * ../configure --with-gtk
+   * make
+   * sudo make install
+   * sudo ldconfig
+
+#### Screen-recorder library
+1. Execute these commands from the terminal: 
+   * sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libsdl-dev
+2. Open this file /etc/ld.so.conf
+3. Add these lines at the end of the file: 
+   * include /etc/ld.so.conf.d/*.conf
+   * /usr/local/lib
+4. Execute this command from the terminal:
+   * sudo /sbin/ldconfig -v
+
+
+### Windows
+#### wxWidgets application
+1. Download windows binaries mingGW-w64 7.3 from https://www.wxwidgets.org/downloads/  (choose the version according to the compiler)
+2. Execute these commands from the terminal: 
+   * mkdir wx-3.1
+   * cd wx-3.1
+3. Unzip here the 3 files, you should have 3 folders
+4. Go to environment variables
+5. Add to path ..\wx-3.1\wxMSW-3.1.5_gcc730_x64_Dev\lib\gcc730_x64_dll
+6. Restart the pc
+
+#### Screen-recorder library
+1. Download ffmpeg library as a zip from https://github.com/FFmpeg/FFmpeg/tree/master
+2. Unzip and extract the folder *FFmpeg-master*
+3. Download windows binaries mingGW-w64 from https://sourceforge.net/projects/mingw-w64/
+4. Download Msys from https://www.msys2.org/
+5. Go to environment variables
+6. Add to path
+   * C:\msys64\usr\local\bin
+   * C:\msys64\mingw64\bin
+7. Open *MSYS2 MinGW 64-bit* shell and execute these commands:
+   * pacman -S make pkgconf diffutils
+   * pacman -S mingw-w64-x86_64-nasm mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2
+     * In case of errors or packets not found execute the command *pacman -Syu* and execute the commands
+8. Restart the pc
+9. Open *MSYS2 MinGW 64-bit* shell and execute these commands:
+   * cd FFmpeg-master
+   * ./configure –enable-shared
+   * make
+   * make install
+
+### MacOS
