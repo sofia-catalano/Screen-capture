@@ -115,7 +115,7 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
 7. Open *MSYS2 MinGW 64-bit* shell and execute these commands:
    * pacman -S make pkgconf diffutils
    * pacman -S mingw-w64-x86_64-nasm mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2
-     * In case of errors or packets not found execute the command *pacman -Syu* and execute the commands
+     * In case of errors or packets not found execute the command *pacman -Syu* and re-execute the commands above
 8. Restart the pc
 9. Open *MSYS2 MinGW 64-bit* shell and execute these commands:
    * cd FFmpeg-master
