@@ -71,7 +71,8 @@ class MyFrame : public wxFrame
 public:
     // ctor
 
-    wxToggleButton *m_playPauseb;
+    wxToggleButton *play_b;
+    wxToggleButton *pause_b;
     wxButton       *m_stopb;
     wxToggleButton *m_micb;
 
@@ -87,11 +88,15 @@ public:
 
     // event handlers
     // --------------
-    void OnPlayPause(wxCommandEvent& event);
+    void OnPlay(wxCommandEvent& event);
+    void OnPause(wxCommandEvent& event);
+
     void OnStop(wxCommandEvent& event);
     void OnMic(wxCommandEvent& event);
     void OnScreenPortion(wxCommandEvent& event);
     void OnFullScreen(wxCommandEvent& event);
+
+    void OnClose(wxCloseEvent& event);
 
     void OnSelectionAudio(wxCommandEvent& e);
     //TODO evento su chiusura finestra
@@ -102,6 +107,8 @@ public:
     // remember the number of running threads and total number of threads
     size_t m_nRunning,
             m_nCount;
+private:
+DECLARE_EVENT_TABLE()
 };
 
 //-----------------------------------------------
@@ -153,16 +160,17 @@ public:
     unsigned m_count;
 };
 
-const int ID_PLAY_PAUSE   = 1;
-const int ID_STOP         = 2;
-const int ID_MIC          = 3;
+const int ID_PLAY   = 1;
+const int ID_PAUSE  = 11;
+const int ID_STOP   = 2;
+const int ID_MIC    = 3;
+
 const int ID_SCREEN_PORTION  = 4;
-const int ID_FULL_SCREEN  = 5;
+const int ID_FULL_SCREEN     = 5;
 
-const int ID_WIDTH  = 6;
-const int ID_HEIGHT = 7;
-const int ID_OFF_X  = 8;
-const int ID_OFF_Y  = 9;
-
+const int ID_WIDTH   = 6;
+const int ID_HEIGHT  = 7;
+const int ID_OFF_X   = 8;
+const int ID_OFF_Y   = 9;
 const int ID_CONFIRM = 10;
 
