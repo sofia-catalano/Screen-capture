@@ -421,6 +421,7 @@ void MyFrame::OnScreenPortion(wxCommandEvent& WXUNUSED(event) )
     MyFrame1 *screenPortionFrame = new MyFrame1("ScreenPortion");
     screenPortionFrame->Show();
     full_screen_b->SetValue(false);
+    screen_portion_b->SetValue(true);
 
 }
 
