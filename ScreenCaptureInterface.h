@@ -25,6 +25,7 @@
 #include "wx/thread.h"
 #include "wx/dynarray.h"
 #include <wx/tglbtn.h>
+#include "Devices.h"
 
 // define this to use wxExecute in the exec tests, otherwise just use system
 #define USE_EXECUTE
@@ -57,6 +58,7 @@ public:
     wxArrayThread m_threads;
     wxSemaphore m_semAllDone;
     bool m_shuttingDown;
+
 };
 
 // ----------------------------------------------------------------------------
@@ -69,13 +71,16 @@ class MyFrame : public wxFrame
 public:
     // ctor
 
-    wxBitmapToggleButton *m_playPauseb;
-    wxBitmapButton *m_stopb;
-    wxBitmapToggleButton *m_micb;
+    wxToggleButton *m_playPauseb;
+    wxButton       *m_stopb;
+    wxToggleButton *m_micb;
+
+    wxToggleButton *screen_portion_b;
+    wxToggleButton *full_screen_b;
+
 
     wxComboBox *listAudioDevices;
     wxTextCtrl *path;
-    wxTextCtrl *fps;
 
     MyFrame(const wxString& title);
     virtual ~MyFrame();
@@ -85,6 +90,7 @@ public:
     void OnPlayPause(wxCommandEvent& event);
     void OnStop(wxCommandEvent& event);
     void OnMic(wxCommandEvent& event);
+    void OnScreenPortion(wxCommandEvent& event);
     void OnFullScreen(wxCommandEvent& event);
 
     void OnSelectionAudio(wxCommandEvent& e);
@@ -105,14 +111,19 @@ class MyFrame1 : public wxFrame{
         public:
         // ctor
 
-        wxButton *portion_screen;
+        wxButton *submit_b;
+        wxTextCtrl *w;
+        wxTextCtrl *h;
+
+        wxTextCtrl *x;
+        wxTextCtrl *y;
 
         MyFrame1(const wxString& title);
         virtual ~MyFrame1();
 
         // event handlers
         // --------------
-        void onSubmit(wxCommandEvent& event);
+        void OnConfirm(wxCommandEvent& event);
 
 };
 // ----------------------------------------------------------------------------
@@ -145,4 +156,13 @@ public:
 const int ID_PLAY_PAUSE   = 1;
 const int ID_STOP         = 2;
 const int ID_MIC          = 3;
-const int ID_FULL_SCREEN  = 4;
+const int ID_SCREEN_PORTION  = 4;
+const int ID_FULL_SCREEN  = 5;
+
+const int ID_WIDTH  = 6;
+const int ID_HEIGHT = 7;
+const int ID_OFF_X  = 8;
+const int ID_OFF_Y  = 9;
+
+const int ID_CONFIRM = 10;
+

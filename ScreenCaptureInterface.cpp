@@ -1,12 +1,22 @@
 #include "ScreenCaptureInterface.h"
 #include "ScreenRecorder.h"
 
+#include "Devices.h"
+
+
 static int playpause = 0;
 static int audio = 0;
 static string output_file = "./prova.mp4";
-static string frame_rate = "30";
+static int off_x=0, off_y=0;
+static int width=600, height=600;
 ScreenRecorder *sc;
+string recordAudio = "none";
 static int n = 0;
+result r;
+
+static bool check = false;
+
+
 
 // Create a new application object
 IMPLEMENT_APP(MyApp)
@@ -18,33 +28,29 @@ IMPLEMENT_APP(MyApp)
 MyFrame::MyFrame(const wxString& title)
         : wxFrame(NULL, wxID_ANY, title)
 {
+    r = getAudioDevices();
 
     wxPanel     *panel      = new wxPanel(this, -1);
     wxBoxSizer  *sizer      = new wxBoxSizer(wxHORIZONTAL);
 
-    m_playPauseb  = new wxBitmapToggleButton(this, ID_PLAY_PAUSE, wxBitmap("../icons/playpause.png", wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
-    m_stopb       = new wxBitmapButton(      this, ID_STOP,       wxBitmap("../icons/stop.png",      wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
-    m_micb        = new wxBitmapToggleButton(this, ID_MIC,        wxBitmap("../icons/mic.png",       wxBITMAP_TYPE_PNG), wxDefaultPosition, wxSize(60, 60), wxBORDER_NONE);
+    m_playPauseb  = new wxToggleButton(this, ID_PLAY_PAUSE, "PLAY_PAUSE", wxDefaultPosition,  wxSize(100, 25));
+    m_stopb       = new wxButton(      this, ID_STOP,       "STOP",       wxDefaultPosition, wxSize(100, 25));
+    m_micb        = new wxToggleButton(this, ID_MIC,        "AUDIO",      wxDefaultPosition, wxSize(100, 25));
 
-    wxButton *p  = new wxButton(this, ID_FULL_SCREEN, "Screen portion", wxPoint(200, 20), wxDefaultSize, 0, wxDefaultValidator, wxButtonNameStr);
-
+    screen_portion_b  = new wxToggleButton(this, ID_SCREEN_PORTION, "SCREEN PORTION", wxPoint(1, 200), wxSize(150, 25), 0, wxDefaultValidator, wxButtonNameStr);
+    full_screen_b     = new wxToggleButton(this, ID_FULL_SCREEN,    "FULL SCREEN",    wxPoint(151, 200), wxSize(150, 25), 0, wxDefaultValidator, wxButtonNameStr);
     //---------------------------------------------------------
     //  SELECT AUDIO DEVICE
     //---------------------------------------------------------
-    wxPoint *posLabelAudio = new wxPoint(20, 90);
-    wxPoint *posSelectAudio = new wxPoint(120, 80);
 
-    char str_label[15] = "Device audio: ";
-    wxString str1;
-    str1 << str_label;
 
-    wxStaticText *st1 = new wxStaticText(this, -1, str1,          *posLabelAudio,  wxDefaultSize, 0, "1");
-    listAudioDevices   = new wxComboBox(  this, 10, wxEmptyString, *posSelectAudio, wxSize(200, 25), 0, NULL, wxCB_READONLY, wxDefaultValidator, wxComboBoxNameStr);
+    wxStaticText *st1 = new wxStaticText(this, -1, wxString("Device audio: "), wxPoint(1, 83),  wxDefaultSize, 0, "1");
+    listAudioDevices   = new wxComboBox(  this, 10, wxEmptyString, wxPoint(101, 80), wxSize(200, 25), 0, NULL, wxCB_READONLY, wxDefaultValidator, wxComboBoxNameStr);
 
-    listAudioDevices->Append("first item");
-    for(int i=0; i<6; i++){
+    listAudioDevices->Append("none");
+    for(int i=0; i<r.n; i++){
         //ciclo su result
-        listAudioDevices->Append("itemhhhhhhhhhhh ");
+        listAudioDevices->Append(r.desc[i]);
     }
 
     listAudioDevices->Select(0);
@@ -59,17 +65,11 @@ MyFrame::MyFrame(const wxString& title)
     //----------------------------------------------------------
     //  TEXTBOX PATH
     //----------------------------------------------------------
-    wxPoint *posPath = new wxPoint(120, 130);
-    wxPoint *posLabelPath = new wxPoint(20, 130);
 
-    char l[15] = "Path: ";
-    wxString str_path;
-    str_path << l;
+    wxStaticText *st2 = new wxStaticText(this, -1, wxString("Path: "), wxPoint(1, 135),  wxDefaultSize, 0, "1");
+    path = new wxTextCtrl(this, 30, output_file, wxPoint(101, 130), wxSize(200, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
 
-    wxStaticText *st2 = new wxStaticText(this, -1, str_path, *posLabelPath,  wxDefaultSize, 0, "1");
-    path = new wxTextCtrl(this, 30, output_file, *posPath, wxSize(200, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
-
-
+/*
     char l1[15] = "Frame rate";
     wxString str_fps;
     str_fps << l;
@@ -81,15 +81,14 @@ MyFrame::MyFrame(const wxString& title)
 
     wxFont myFont(7, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
-    controlFps->SetFont(myFont);
-    fps = new wxTextCtrl(this, 30, frame_rate, wxPoint(120, 180), wxSize(40, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+*/
     //controlFps->Show(false);
     //char ss[10];
 
     path->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
             output_file = path->GetValue();
     });
-
+/*
     fps->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
         static int tmp = 30;
         frame_rate = fps->GetValue();
@@ -108,6 +107,7 @@ MyFrame::MyFrame(const wxString& title)
             fps->SetBackgroundColour(wxColour(0xFF, 0xFF, 0xFF));
         }
     });
+*/
     //----------------------------------------------------------
     //  END TEXTBOX PATH
     //----------------------------------------------------------
@@ -120,7 +120,9 @@ MyFrame::MyFrame(const wxString& title)
             wxCommandEventHandler(MyFrame::OnStop) );
     Connect(ID_MIC, wxEVT_TOGGLEBUTTON,
             wxCommandEventHandler(MyFrame::OnMic) );
-    Connect(ID_FULL_SCREEN, wxEVT_BUTTON,
+    Connect(ID_SCREEN_PORTION, wxEVT_TOGGLEBUTTON,
+            wxCommandEventHandler(MyFrame::OnScreenPortion) );
+    Connect(ID_FULL_SCREEN, wxEVT_TOGGLEBUTTON,
             wxCommandEventHandler(MyFrame::OnFullScreen) );
 
 
@@ -137,39 +139,155 @@ MyFrame::MyFrame(const wxString& title)
 #endif // wxUSE_STATUSBAR
 
     Center();
-    SetSize(400, 400);
+    SetSize(305, 300);
     Show();
 }
 
 
 
 MyFrame1::MyFrame1(const wxString& title)
-        : wxFrame(NULL, wxID_ANY, title)
-{
+        : wxFrame(NULL, wxID_ANY, title) {
 
-    wxPanel     *panel      = new wxPanel(this, -1);
-    wxBoxSizer  *sizer      = new wxBoxSizer(wxHORIZONTAL);
+    static string str_width  = "";
+    static string str_height = "";
+
+    static string str_off_x = "";
+    static string str_off_y = "";
+
+    wxPanel *panel = new wxPanel(this, -1);
+    wxBoxSizer *sizer = new wxBoxSizer(wxHORIZONTAL);
 
 
-    wxStaticText *st1 = new wxStaticText(this, -1, "Widht", wxPoint(20, 20),  wxDefaultSize, 0, "1");
+    wxStaticText *st1 = new wxStaticText(this, -1, "Widht", wxPoint(20, 20), wxDefaultSize, 0, "1");
     //wxStaticText *controlWidth = new wxStaticText(this, -1, "(min:1, max:60)", wxPoint(20, 200),  wxDefaultSize, 0, "1");
     //wxFont myFont(7, wxFONTFAMILY_ROMAN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 
     //controlWidth->SetFont(myFont);
-    wxTextCtrl *width = new wxTextCtrl(this, 30, frame_rate, wxPoint(70, 20), wxSize(40, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+    //wxTextCtrl *width = new wxTextCtrl(this, 30, frame_rate, wxPoint(70, 20), wxSize(40, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
 
-    wxStaticText *st2 = new wxStaticText(this, -1, "Height", wxPoint(20, 50),  wxDefaultSize, 0, "1");
-    wxTextCtrl *height = new wxTextCtrl(this, 30, frame_rate, wxPoint(70, 50), wxSize(40, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+    wxStaticText *st2 = new wxStaticText(this, -1, "Height", wxPoint(20, 50), wxDefaultSize, 0, "1");
+    //wxTextCtrl *height = new wxTextCtrl(this, 30, frame_rate, wxPoint(70, 50), wxSize(40, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+
+    wxStaticText *label_off_x = new wxStaticText(this, -1, "Offset X", wxPoint(20, 80), wxDefaultSize, 0, "1");
+    wxStaticText *label_off_y = new wxStaticText(this, -1, "Offset Y", wxPoint(20, 110), wxDefaultSize, 0, "1");
+
+    str_width = to_string(width);
+    str_height = to_string(height);
+    str_off_x = to_string(off_x);
+    str_off_y = to_string(off_y);
+
+    w = new wxTextCtrl(this, ID_WIDTH, str_width, wxPoint(100, 20), wxSize(150, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+    h = new wxTextCtrl(this, ID_HEIGHT, str_height, wxPoint(100, 50), wxSize(150, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+
+    x = new wxTextCtrl(this, ID_OFF_X, str_off_x, wxPoint(100, 80), wxSize(150, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+    y = new wxTextCtrl(this, ID_OFF_Y, str_off_y, wxPoint(100, 110), wxSize(150, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
+
+    submit_b = new wxButton( this, ID_CONFIRM, "Confirm", wxPoint(125, 150), wxSize(100 , 25));
+
+    Connect(ID_CONFIRM, wxEVT_BUTTON,
+            wxCommandEventHandler(MyFrame1::OnConfirm) );
 
 
     SetSizer(sizer);
 
-#if wxUSE_STATUSBAR
-    CreateStatusBar(2);
-#endif // wxUSE_STATUSBAR
 
     Center();
-    SetSize(400, 150);
+    SetSize(300, 230);
+
+
+    w->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
+        static int tmp = 0;
+        str_width = w->GetValue();
+
+        try {
+            tmp = stoi(str_width);
+            cout<<"Conversione to int"<<tmp<<endl;
+
+            if(tmp <= getScreenSize().x && tmp > 0){
+                width = tmp;
+                submit_b->Enable(true);
+            }
+            else{
+                submit_b->Enable(false);
+            }
+        }
+        catch(std::invalid_argument& e){
+            cout<<"Invalid width"<<endl;
+            submit_b->Enable(false);
+        }
+    });
+
+
+    h->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
+        static int tmp = 0;
+        str_height = h->GetValue();
+        cout<<"Height-->"<<str_height<<endl;
+
+        try {
+            tmp = stoi(str_height);
+            if(tmp <= getScreenSize().y && tmp > 0){
+                height = tmp;
+                submit_b->Enable(true);
+            }
+            else{
+                submit_b->Enable(false);
+            }
+        }
+        catch(std::invalid_argument& e){
+            // if no conversion could be performed
+            cout<<"Invalid height"<<endl;
+            submit_b->Enable(false);
+        }
+    });
+
+    x->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
+        static int tmp = 0;
+        str_off_x = x->GetValue();
+        cout<<"OFF_X-->"<<str_off_x<<endl;
+
+        try {
+            tmp = stoi(str_off_x);
+            cout<<"Conversione to int"<<tmp<<endl;
+            if(tmp <= getScreenSize().y && tmp >= 0){
+                off_x = tmp;
+                submit_b->Enable(true);
+            }
+            else{
+                submit_b->Enable(false);
+            }
+
+        }
+        catch(std::invalid_argument& e){
+            // if no conversion could be performed
+            cout<<"Invalid off_x"<<endl;
+            submit_b->Enable(false);
+        }
+    });
+
+    y->Bind(wxEVT_TEXT, [&](wxCommandEvent& event) {
+        static int tmp = 0;
+        str_off_y = y->GetValue();
+        cout<<"OFF_X-->"<<str_off_y<<endl;
+
+        try {
+            tmp = stoi(str_off_y);
+            cout<<"Conversione to int"<<tmp<<endl;
+            if(tmp <= getScreenSize().y && tmp >= 0){
+                off_y = tmp;
+                submit_b->Enable(true);
+            }
+            else{
+                submit_b->Enable(false);
+            }
+        }
+        catch(std::invalid_argument& e){
+            // if no conversion could be performed
+            cout<<"Invalid off_y"<<endl;
+            submit_b->Enable(false);
+        }
+    });
+
+
 }
 
 MyFrame::~MyFrame()
@@ -232,8 +350,12 @@ MyThread *MyFrame::CreateThread()
 // ----------------------------------------------------------------------------
 void MyFrame::OnSelectionAudio(wxCommandEvent& e){
     //prova->SetSelection(static_cast<wxComboBox*>(e.GetEventObject())->GetSelection());
-    cout<<"Selezione::"<<listAudioDevices->GetCurrentSelection()<<endl;
-    //cout<<path->GetLineText(0);
+    if(listAudioDevices->GetCurrentSelection() > 0 ){
+        recordAudio = r.devices[listAudioDevices->GetCurrentSelection()-1];
+    }
+    else if(listAudioDevices->GetCurrentSelection() == 0 ){
+        recordAudio = "none";
+    }
 }
 
 void MyFrame::OnPlayPause(wxCommandEvent& WXUNUSED(event) )
@@ -256,7 +378,7 @@ void MyFrame::OnPlayPause(wxCommandEvent& WXUNUSED(event) )
         playpause = 2;
     }
     else if(playpause == 2){
-        sc->resume();
+        sc->recording();
         playpause = 1;
     }
 
@@ -267,7 +389,7 @@ void MyFrame::OnPlayPause(wxCommandEvent& WXUNUSED(event) )
 
 void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
 {
-    sc->stop();
+    sc->stop_recording();
 
     m_playPauseb->SetValue(false);
     m_stopb->Enable(false);
@@ -275,6 +397,7 @@ void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
     m_micb->SetValue(false);
     m_micb->Enable(true);
 
+    playpause = 0;
     cout<<"Stop recording"<<endl;
 }
 
@@ -293,10 +416,27 @@ void MyFrame::OnMic(wxCommandEvent& WXUNUSED(event) )
     cout<<"Recording mic"<<endl;
 }
 
+void MyFrame::OnScreenPortion(wxCommandEvent& WXUNUSED(event) )
+{
+    MyFrame1 *screenPortionFrame = new MyFrame1("ScreenPortion");
+    screenPortionFrame->Show();
+    full_screen_b->SetValue(false);
+
+}
+
 void MyFrame::OnFullScreen(wxCommandEvent& WXUNUSED(event) )
 {
-    MyFrame1 *screenFrame = new MyFrame1("Prova");
-    screenFrame->Show();
+    screen_size size = getScreenSize();
+    width = size.x;
+    height = size.y;
+    off_x = 0;
+    off_y = 0;
+    screen_portion_b->SetValue(false);
+}
+
+void MyFrame1::OnConfirm(wxCommandEvent& event){
+    //check input altrimenti non va avanti
+    Close(true);
 }
 
 
@@ -335,16 +475,29 @@ wxThread::ExitCode MyThread::Entry()
 
     VideoInfo vi;
     //prendere valori da GUI altrimenti default
-    vi.width = 800;
-    vi.height = 800;
-    vi.offset_x = 0;
-    vi.offset_y = 0;
+    cout<<endl<<"--------------------Parametri per creazione costruttore-------------------"<<endl;
+    cout<<"Width-->"<<width<<endl;
+    cout<<"Heigth-->"<<height<<endl;
 
-    vi.framerate = stoi(frame_rate);
-    vi.status  = &playpause; //for restore m_playb on stop()
+    cout<<"OFF_X-->"<<off_x<<endl;
+    cout<<"OFF_Y-->"<<off_y<<endl;
+    cout<<"--------------------------------------------------------------------------"<<endl;
+
+    vi.width = width;
+    vi.height = height;
+    vi.offset_x = off_x;
+    vi.offset_y = off_y;
+
+#ifdef _WIN32
+    vi.framerate = 30;
+#elif __linux__
+    vi.framerate = 35;
+#endif
+
     vi.output_file = output_file;
 
-    ScreenRecorder screen_recorder{vi};
+    cout<<"Fine costruttore"<<endl;
+    ScreenRecorder screen_recorder{vi, recordAudio};
 
     sc = &screen_recorder;
     sc->recording();
