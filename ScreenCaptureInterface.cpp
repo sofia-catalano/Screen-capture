@@ -9,7 +9,8 @@ static int audio = 0;
 static string output_file = "./prova.mp4";
 static int off_x=0, off_y=0;
 static int width=600, height=600;
-ScreenRecorder *sc;
+
+ScreenRecorder *sc = nullptr;
 string recordAudio = "none";
 static int n = 0;
 result r;
@@ -294,6 +295,30 @@ void MyFrame::OnPlay(wxCommandEvent& WXUNUSED(event) )
     if(!playpause){
         playpause = 1;
 
+        VideoInfo vi;
+        //prendere valori da GUI altrimenti default
+        cout<<endl<<"--------------------Parametri per creazione costruttore-------------------"<<endl;
+        cout<<"Width-->"<<width<<endl;
+        cout<<"Heigth-->"<<height<<endl;
+
+        cout<<"OFF_X-->"<<off_x<<endl;
+        cout<<"OFF_Y-->"<<off_y<<endl;
+        cout<<"--------------------------------------------------------------------------"<<endl;
+
+        vi.width = width;
+        vi.height = height;
+        vi.offset_x = off_x;
+        vi.offset_y = off_y;
+        vi.output_file = output_file;
+
+#ifdef _WIN32
+    vi.framerate = 30;
+#elif __linux__
+    vi.framerate = 35;
+#endif
+
+        sc = new ScreenRecorder(vi, recordAudio);
+
         MyThread *thread = CreateThread();
 
         if ( thread->Run() != wxTHREAD_NO_ERROR )
@@ -336,8 +361,13 @@ void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
     m_micb->SetValue(false);
     m_micb->Enable(true);
 
+    path->Enable(true);
+    screen_portion_b->Enable(true);
+    full_screen_b->Enable(true);
+
     playpause = 0;
     cout<<"Stop recording"<<endl;
+    delete sc;
 }
 
 void MyFrame::OnMic(wxCommandEvent& WXUNUSED(event) )
@@ -381,8 +411,16 @@ void MyFrame1::OnConfirm(wxCommandEvent& event){
 
 void MyFrame::OnClose(wxCloseEvent& event)
 {
-    sc->stop_recording();
-    Destroy();
+    try{
+        if(playpause){
+            sc->stop_recording();
+            delete sc;
+        }
+        Destroy();
+    }
+    catch(exception e){}
+
+
 }
 
 
@@ -417,35 +455,6 @@ MyThread::~MyThread()
 
 wxThread::ExitCode MyThread::Entry()
 {
-    //wxLogMessage("Thread started (priority = %u).", GetPriority());
-
-    VideoInfo vi;
-    //prendere valori da GUI altrimenti default
-    cout<<endl<<"--------------------Parametri per creazione costruttore-------------------"<<endl;
-    cout<<"Width-->"<<width<<endl;
-    cout<<"Heigth-->"<<height<<endl;
-
-    cout<<"OFF_X-->"<<off_x<<endl;
-    cout<<"OFF_Y-->"<<off_y<<endl;
-    cout<<"--------------------------------------------------------------------------"<<endl;
-
-    vi.width = width;
-    vi.height = height;
-    vi.offset_x = off_x;
-    vi.offset_y = off_y;
-
-#ifdef _WIN32
-    vi.framerate = 30;
-#elif __linux__
-    vi.framerate = 35;
-#endif
-
-    vi.output_file = output_file;
-
-    cout<<"Fine costruttore"<<endl;
-    ScreenRecorder screen_recorder{vi, recordAudio};
-
-    sc = &screen_recorder;
     sc->recording();
 
     return NULL;

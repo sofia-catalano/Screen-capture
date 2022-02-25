@@ -11,7 +11,12 @@
 using namespace std;
 
 
-ScreenRecorder::ScreenRecorder(VideoInfo vi, string audio_device) : vi(vi), audio_device(audio_device){
+ScreenRecorder::ScreenRecorder(VideoInfo v, string ad) {
+    vi = v;
+    audio_device = ad;
+
+    cout<<"vi->"<<v.output_file<<endl<<"recordAudio->"<<ad<<endl;
+
 #ifdef _WIN32
     vi.framerate = 15; //TODO vedere 30
 #elif __linux__
@@ -69,7 +74,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo vi, string audio_device) : vi(vi), audi
 
 ScreenRecorder::~ScreenRecorder(){
     try {
-        cout << "Inizio costruttore" << endl;
+        cout << "Inizio distruttore" << endl;
         if (t_converting_video.joinable())
             t_converting_video.join();
         if (t_converting_audio.joinable())
@@ -89,6 +94,7 @@ ScreenRecorder::~ScreenRecorder(){
         av_frame_free(&inVideoFrame);
         av_frame_free(&outVideoFrame);
 
+        cout << "Fine blocco try" << endl;
         //fre audio resources
         if( audio_device != "none") {
             //free_audio_resources();
@@ -108,14 +114,15 @@ ScreenRecorder::~ScreenRecorder(){
 
 
         }
-        avformat_close_input(&out_format_context);
-        avformat_free_context(out_format_context);
+        //avformat_close_inpuft(&out_format_context);
+        //avformat_free_context(out_format_context);
 
         cout << "Distruttore Screen Recorder " << endl;
     }catch(exception e){
         cout << "Distruttore Screen Recorder exception" << endl;
         cout<<e.what()<<endl;
     }
+    cout<<"fine distruttore";
 }
 
 void ScreenRecorder::initializeOutputContext(){

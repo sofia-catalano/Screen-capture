@@ -51,7 +51,7 @@ enum state{
 
 class ScreenRecorder {
 public:
-    ScreenRecorder(VideoInfo vi,string audio_device);
+    ScreenRecorder(VideoInfo v,string ad);
     ~ScreenRecorder();
 
     void recording();
