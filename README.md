@@ -65,6 +65,7 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
 #### Screenshot
 [interface screen]**(aggiungere l'url)**
 
+The application works with Linux and Windows, but it has not been tested on MacOS.
 
 ## How to run compile and run
 
@@ -90,6 +91,11 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
    * /usr/local/lib
 4. Execute this command from the terminal:
    * sudo /sbin/ldconfig -v
+
+5. Check if X11 lib is installed with this command from the terminal: 
+   * xdpyinfo | grep version
+6. If it is not installed execute this command from the terminal: 
+   * sudo apt install libx11-dev
 
 
 ### Windows
@@ -124,9 +130,10 @@ It uses the function **getAudioDevices()** (in Devices.cpp) to get the available
    * make install
 
 ### MacOS
-#### wxWidgets application
 
 #### Screen-recorder library
 1. Execute these commands from the terminal:
    * brew install ffmpeg
    * brew update && brew upgrade ffmpeg
+2. Download and install X11 lib from this link: 
+   * https://github.com/XQuartz/XQuartz/releases/download/XQuartz-2.8.1/XQuartz-2.8.1.dmg
