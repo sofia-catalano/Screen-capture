@@ -200,11 +200,12 @@ screen_size getScreenSize() {
 #if defined _WIN32
 
     DWORD dwWidth = GetSystemMetrics(SM_CXSCREEN);
-        DWORD dwHeight = GetSystemMetrics(SM_CYSCREEN);
+    DWORD dwHeight = GetSystemMetrics(SM_CYSCREEN);
 
-        size.x=(int)dwWidth;
-        size.y=(int)dwHeight;
-#elif defined __linux__
+    size.x=(int)dwWidth;
+    size.y=(int)dwHeight;
+#endif
+#if (defined __linux__ || defined __APPLE__)
     Display* disp = XOpenDisplay(NULL);
     Screen*  scrn = DefaultScreenOfDisplay(disp);
     size.y = scrn->height;

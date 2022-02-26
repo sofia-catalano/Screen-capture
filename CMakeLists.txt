@@ -94,13 +94,27 @@ IF(APPLE)
 
     find_path(SWSCALE_INCLUDE_DIR /opt/homebrew/Cellar/ffmpeg/4.4.1-with-options_2/include/libswscale/swscale.h)
     find_library(SWSCALE_LIBRARY swscale)
+
+    include_directories(
+            BEFORE /usr/X11R6/include /usr/X11R6/lib
+    )
 ENDIF(APPLE)
 add_executable(${PROJECT_NAME} ${SRC_LIST} ScreenRecorder.cpp ScreenRecorder.h ScreenCaptureInterface.h ScreenCaptureInterface.cpp main.cpp main.h)
 
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR} ${SWSCALE_INCLUDE_DIR} ${ALSA_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
-        ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY} ${wxWidgets_LIBRARIES} ${ALSA_LIBRARY} "-lX11")
+
+
+
+IF(APPLE)
+    target_link_libraries(Screen-capture PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
+            ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY} -L/usr/X11R6/lib -I/usr/X11R6/include -lX11)
+ELSE()
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} Threads::Threads
+                   ${SWRESAMPLE_LIBRARY} ${SWSCALE_LIBRARY} ${wxWidgets_LIBRARIES} ${ALSA_LIBRARY} "-lX11")
+ENDIF(APPLE)
+
 
 #add_executable(${PROJECT_NAME} ${SRC_LIST} ScreenCaptureInterface.cpp ScreenCaptureInterface.h main.h)
 #target_link_libraries(${PROJECT_NAME} ${wxWidgets_LIBRARIES})

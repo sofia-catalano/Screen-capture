@@ -12,15 +12,13 @@ using namespace std;
 
 
 ScreenRecorder::ScreenRecorder(VideoInfo v, string ad) {
-    vi = v;
-    audio_device = ad;
 
     cout<<"vi->"<<v.output_file<<endl<<"recordAudio->"<<ad<<endl;
 
 #ifdef _WIN32
-    vi.framerate = 15; //TODO vedere 30
+    vi.framerate = 30;
 #elif __linux__
-    vi.framerate = 35; //TODO vedere 30
+    vi.framerate = 35;
 #elif __APPLE__
     vi.framerate = 30;
 #endif
@@ -48,7 +46,12 @@ ScreenRecorder::ScreenRecorder(VideoInfo v, string ad) {
         /*check if screen size are correct*/
         screen_size size = getScreenSize();
         cout<<"Size:"<<size.x<<","<<size.y<<endl;
-        if((vi.offset_x + vi.width) > size.x || (vi.offset_y + vi.height) > size.y){
+        vi.width = vi.width - vi.offset_x;
+        vi.height = vi.height - vi.offset_y;
+        if(vi.width%2 != 0) vi.width-=1;
+        if(vi.height%2 != 0) vi.height-=1;
+        if(vi.width <= 0 || vi.height <= 0 || vi.offset_x < 0 || vi.offset_y < 0 ||
+                (vi.offset_x + vi.width) > size.x || (vi.offset_y + vi.height) > size.y){
             //throw eccezione TODO ECCEZIONE DA DEFINIRE
             /*nella gestione dell'eccezione nel MAIN.cpp:
            cout<<Reinserire parametri schermo corretti, con limite massimo dimensioni_schermo.x dimensioni_schermo.y
@@ -56,6 +59,9 @@ ScreenRecorder::ScreenRecorder(VideoInfo v, string ad) {
             cin<<vi.width vi.height vi.offset_x vi.offset_y;
              */
         }
+        //SETTARE SE DATI CORRETTI
+        vi = v;
+        audio_device = ad;
 
         program_state=START;
         initializeOutputContext();
@@ -181,9 +187,6 @@ void ScreenRecorder::initializeVideoInput(){
         video_in_format_context = nullptr;
         video_in_format_context = avformat_alloc_context();
 
-        // TODO risolvere il fullscreen
-        //https://unix.stackexchange.com/questions/573121/get-current-screen-dimensions-via-xlib-using-c
-        //https://www.py4u.net/discuss/81858
 
 /* video_format needed for av_find_input_format*/
 #ifdef _WIN32
@@ -439,7 +442,6 @@ void ScreenRecorder::recording(){
         audio_cv.notify_one();
     }else if(program_state == START || program_state == STOP){
         if(program_state == STOP) {
-            //TODO resettare tutto per ripartire, anche pts counter
             reset_video();
             current_audio_pts=0;
             current_video_pts=0;
@@ -498,9 +500,7 @@ void ScreenRecorder::convert_video_format() {
     while(true ){
         unique_lock<mutex> ul_video(current_video_state);
 
-        while(program_state==PAUSE) {
-            video_cv.wait(ul_video);
-        }
+        video_cv.wait(ul_video, [this](){return program_state!=PAUSE;} );
 
         if(program_state==STOP){
             ul_video.unlock();
@@ -621,7 +621,7 @@ void ScreenRecorder::initializeAudioInput(){
 
     // TODO CAPIRE SE SERVONO le options
     /**
-     * av_dict_set: populate the variable "video_options" that is a reference to an AVDictionary object
+     * av_dict_set: populate the variable "audio_options" that is a reference to an AVDictionary object
      * This component is used to inform avformat_open_input and avformat_find_stream_info about all settings
      */
     if( av_dict_set(&audio_options, "sample_rate", "44100", 0)){
@@ -642,7 +642,6 @@ void ScreenRecorder::initializeAudioInput(){
             throw logic_error{"Error in opening input stream"};
         }
 #elif __linux__
-    //TODO get audio string
     audio_str = audio_device;
     if (avformat_open_input(&in_audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) < 0){
         throw runtime_error("Error in opening input stream");
@@ -650,7 +649,7 @@ void ScreenRecorder::initializeAudioInput(){
 #elif __APPLE__
     //[[VIDEO]:[AUDIO]]
     // none do not record the corresponding media type
-    audio_str = "none:0"; // TODO oppure 1
+    audio_str = "none:0";
     if (avformat_open_input(&in_audio_format_context, audio_str.c_str(), audio_input_format, &audio_options) < 0){
         throw logic_error("Error in opening input stream");
     }
@@ -745,7 +744,7 @@ void ScreenRecorder::initializeAudioOutput(){
     audio_out_codec_context->codec_id = AV_CODEC_ID_AAC;
     audio_out_codec_context->channels = audio_in_codec_context->channels;
     audio_out_codec_context->channel_layout = av_get_default_channel_layout(audio_out_codec_context->channels);
-    audio_out_codec_context->bit_rate = 64000;  //TODO 128000 or 9600
+    audio_out_codec_context->bit_rate = 64000;
     audio_out_codec_context->time_base.num = 1;
     audio_out_codec_context->time_base.den = audio_in_codec_context->sample_rate;
     audio_out_codec_context->sample_fmt = audio_encodec->sample_fmts ? audio_encodec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
@@ -849,9 +848,7 @@ void ScreenRecorder::convert_audio_format() {
     while(true){
         unique_lock<mutex> ul_audio(current_audio_state);
 
-        while(program_state==PAUSE) {
-            audio_cv.wait(ul_audio);
-        }
+        audio_cv.wait(ul_audio, [this](){return program_state!=PAUSE;} );
 
         if(program_state==STOP){
             ul_audio.unlock();

@@ -74,10 +74,12 @@ public:
     wxToggleButton *play_b;
     wxToggleButton *pause_b;
     wxButton       *m_stopb;
-    wxToggleButton *m_micb;
+    //wxToggleButton *m_micb;
+
+    wxCheckBox      *check_audio;
 
     wxToggleButton *screen_portion_b;
-    wxToggleButton *full_screen_b;
+    wxCheckBox *full_screen_b;
 
 
     wxComboBox *listAudioDevices;
@@ -173,4 +175,6 @@ const int ID_HEIGHT  = 7;
 const int ID_OFF_X   = 8;
 const int ID_OFF_Y   = 9;
 const int ID_CONFIRM = 10;
+
+const int ID_CHECK_AUDIO = 12;
 

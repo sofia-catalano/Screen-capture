@@ -31,13 +31,21 @@ MyFrame::MyFrame(const wxString& title)
 {
     r = getAudioDevices();
 
-    play_b        = new wxToggleButton(this, ID_PLAY,  "PLAY",       wxPoint(1, 10), wxSize(100, 25));
-    pause_b       = new wxToggleButton(this, ID_PAUSE, "PAUSE",      wxPoint(102, 10), wxSize(100, 25));
-    m_stopb       = new wxButton(      this, ID_STOP,  "STOP",       wxPoint(202, 10), wxSize(100, 25));
-    m_stopb->Enable(false);
+    play_b        = new wxToggleButton(this, ID_PLAY,  "PLAY",       wxPoint(15, 200), wxSize(100, 22));
+    pause_b       = new wxToggleButton(this, ID_PAUSE, "PAUSE",      wxPoint(120, 200), wxSize(100, 22));
+    m_stopb       = new wxButton(      this, ID_STOP,  "STOP",       wxPoint(225, 200), wxSize(100, 22));
 
-    m_micb        = new wxToggleButton(this, ID_MIC,   "AUDIO DEVICES",      wxPoint(1, 80), wxSize(120, 25));
-    listAudioDevices   = new wxComboBox(  this, 10, wxEmptyString, wxPoint(125, 80), wxSize(177, 25), 0, NULL, wxCB_READONLY, wxDefaultValidator, wxComboBoxNameStr);
+    screen_portion_b  = new wxToggleButton(this, ID_SCREEN_PORTION, "Screen portion", wxPoint(135, 10), wxSize(177, 25), 0, wxDefaultValidator, wxButtonNameStr);
+    full_screen_b     = new wxCheckBox(this, ID_FULL_SCREEN,    "Full screen",    wxPoint(25, 10), wxSize(150, 25), 0, wxDefaultValidator, wxButtonNameStr);
+
+
+    m_stopb->Enable(false);
+    screen_portion_b->Enable(false);
+
+    //m_micb        = new wxToggleButton(this, ID_MIC,   "AUDIO DEVICES",      wxPoint(1, 80), wxSize(120, 25));
+    check_audio   = new wxCheckBox(this, ID_CHECK_AUDIO,  "Audio", wxPoint(25, 65), wxSize(100, 25));
+
+    listAudioDevices   = new wxComboBox(  this, 10, wxEmptyString, wxPoint(135, 65), wxSize(177, 25), 0, NULL, wxCB_READONLY, wxDefaultValidator, wxComboBoxNameStr);
     listAudioDevices->Append("none");
     for(int i=0; i<r.n; i++){
         //ciclo su result
@@ -46,11 +54,8 @@ MyFrame::MyFrame(const wxString& title)
     listAudioDevices->Select(0);
     listAudioDevices->Enable(false);
 
-    wxStaticText *st2 = new wxStaticText(this, -1, wxString("Path: "), wxPoint(50, 135),  wxDefaultSize, 0, "1");
-    path = new wxTextCtrl(this, 30, output_file, wxPoint(125, 130), wxSize(177, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
-
-    screen_portion_b  = new wxToggleButton(this, ID_SCREEN_PORTION, "SCREEN PORTION", wxPoint(1, 200), wxSize(150, 25), 0, wxDefaultValidator, wxButtonNameStr);
-    full_screen_b     = new wxToggleButton(this, ID_FULL_SCREEN,    "FULL SCREEN",    wxPoint(151, 200), wxSize(150, 25), 0, wxDefaultValidator, wxButtonNameStr);
+    wxStaticText *st2 = new wxStaticText(this, -1, wxString("Path: "), wxPoint(50, 124),  wxDefaultSize, 0, "1");
+    path = new wxTextCtrl(this, 30, output_file, wxPoint(135, 120), wxSize(177, 25), 0, wxDefaultValidator, wxTextCtrlNameStr);
 
 
     full_screen_b->SetValue(true);
@@ -74,17 +79,21 @@ MyFrame::MyFrame(const wxString& title)
             wxCommandEventHandler(MyFrame::OnMic) );
     Connect(ID_SCREEN_PORTION, wxEVT_TOGGLEBUTTON,
             wxCommandEventHandler(MyFrame::OnScreenPortion) );
-    Connect(ID_FULL_SCREEN, wxEVT_TOGGLEBUTTON,
+    Connect(ID_FULL_SCREEN, wxEVT_CHECKBOX,
             wxCommandEventHandler(MyFrame::OnFullScreen) );
+
+    Connect(ID_CHECK_AUDIO, wxEVT_CHECKBOX,
+            wxCommandEventHandler(MyFrame::OnMic) );
 
 
     Center();
-    SetSize(305, 300);
+    SetSize(340, 300);
     Show();
 
 #if wxUSE_STATUSBAR
     CreateStatusBar(2);
 #endif // wxUSE_STATUSBAR
+
 
 
 }
@@ -98,7 +107,7 @@ MyFrame1::MyFrame1(const wxString& title)
     static string str_off_x = "";
     static string str_off_y = "";
 
-    wxStaticText *st1 = new wxStaticText(this, -1, "Widht", wxPoint(20, 20), wxDefaultSize, 0, "1");
+    wxStaticText *st1 = new wxStaticText(this, -1, "Width", wxPoint(20, 20), wxDefaultSize, 0, "1");
     wxStaticText *st2 = new wxStaticText(this, -1, "Height", wxPoint(20, 50), wxDefaultSize, 0, "1");
 
     wxStaticText *label_off_x = new wxStaticText(this, -1, "Offset X", wxPoint(20, 80), wxDefaultSize, 0, "1");
@@ -312,9 +321,9 @@ void MyFrame::OnPlay(wxCommandEvent& WXUNUSED(event) )
         vi.output_file = output_file;
 
 #ifdef _WIN32
-    vi.framerate = 30;
+        vi.framerate = 30;
 #elif __linux__
-    vi.framerate = 35;
+        vi.framerate = 35;
 #endif
 
         sc = new ScreenRecorder(vi, recordAudio);
@@ -327,7 +336,6 @@ void MyFrame::OnPlay(wxCommandEvent& WXUNUSED(event) )
         }
         path->Enable(false);
         m_stopb->Enable(true);
-        m_micb->Enable(false);
         full_screen_b->Enable(false);
         screen_portion_b->Enable(false);
     }
@@ -358,8 +366,6 @@ void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
     pause_b->SetValue(false);
     m_stopb->Enable(false);
 
-    m_micb->SetValue(false);
-    m_micb->Enable(true);
 
     path->Enable(true);
     screen_portion_b->Enable(true);
@@ -372,13 +378,13 @@ void MyFrame::OnStop(wxCommandEvent& WXUNUSED(event) )
 
 void MyFrame::OnMic(wxCommandEvent& WXUNUSED(event) )
 {
-    static int pressed = 1;
-    if(pressed){
-        pressed = 0;
+    static int checked = 1;
+    if(checked){
+        checked = 0;
         listAudioDevices->Enable(true);
     }
     else{
-        pressed = 1;
+        checked = 1;
         listAudioDevices->Enable(false);
     }
     //API set up recording from mic too
@@ -396,12 +402,25 @@ void MyFrame::OnScreenPortion(wxCommandEvent& WXUNUSED(event) )
 
 void MyFrame::OnFullScreen(wxCommandEvent& WXUNUSED(event) )
 {
+    static int checked = 0;
     screen_size size = getScreenSize();
     width = size.x;
     height = size.y;
     off_x = 0;
     off_y = 0;
-    screen_portion_b->SetValue(false);
+    if(checked){
+        screen_portion_b->SetValue(false);
+        screen_portion_b->Enable(false);
+        checked = 0;
+    }
+    else{
+        screen_portion_b->SetValue(true);
+        screen_portion_b->Enable(true);
+        checked=1;
+    }
+
+
+
 }
 
 void MyFrame1::OnConfirm(wxCommandEvent& event){
