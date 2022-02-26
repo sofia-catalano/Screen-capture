@@ -63,7 +63,11 @@ In particular it allows the user to
 It uses the function **getAudioDevices()** (in Devices.cpp) to get the available input audio devices on Windows and Linux.  
 
 #### Screenshot
-![wxWidgets application](./wxWidgets_app.jpg)
+##### Screen Capture
+<a href="wxWidgets ScreenCapture"><img src="./ScreenCapture.jpg" width="400" height="400"></a>
+
+##### Screen portion
+<a href="wxWidgets ScreenPortion"><img src="./ScreenPortion.jpg" width="400" height="400"></a>
 
 The application works with Linux and Windows, but it has not been tested on MacOS.
 
