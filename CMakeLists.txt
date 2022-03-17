@@ -1,14 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(Screen-capture)
 
-aux_source_directory(. SRC_LIST)
-
-set(wxWidgets_CONFIGURATION mswu)
-find_package(wxWidgets COMPONENTS core base REQUIRED)
-include(${wxWidgets_USE_FILE})
-
-
-
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
 
@@ -97,6 +89,12 @@ IF(WIN32)
 ENDIF(WIN32)
 
 IF(UNIX)
+    aux_source_directory(. SRC_LIST)
+    set(wxWidgets_CONFIGURATION mswu)
+    find_package(wxWidgets COMPONENTS core base REQUIRED)
+    include(${wxWidgets_USE_FILE})
+
+
     find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
     find_library(AVCODEC_LIBRARY avcodec)
 
