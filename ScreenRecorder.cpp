@@ -16,7 +16,7 @@ ScreenRecorder::ScreenRecorder(VideoInfo v, string ad) {
     cout<<"vi->"<<v.output_file<<endl<<"recordAudio->"<<ad<<endl;
 
 #ifdef _WIN32
-    vi.framerate = 30;
+    vi.framerate = 15;
 #elif __linux__
     vi.framerate = 35;
 #elif __APPLE__
